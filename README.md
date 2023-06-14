@@ -16,19 +16,19 @@ To generate a large dataset of aligned MIDI and raw audio, we can synthesize MID
 
 ## I/O
 **Input**: spectrogram frames, one frame per input position
-    - Audio sample rate: 16kHz, FFT length 2048 samples, hop width 128 samples
-    - Scaled output to 512 mel bins to match models embedding size, used log-scaled magnitude
-    - Input sequences limited to 512 positions (511 frames plus EOS)
-    - Terminate input sequences with learnable EOS embedding
+    * Audio sample rate: 16kHz, FFT length 2048 samples, hop width 128 samples
+    * Scaled output to 512 mel bins to match models embedding size, used log-scaled magnitude
+    * Input sequences limited to 512 positions (511 frames plus EOS)
+    * Terminate input sequences with learnable EOS embedding
 **Output**: softmax distribution over discrete vocabulary of event
-    - Heavily inspired by the messages defined in the MIDI specification
-    - **Vocabulary**:
-        - Note: [128 values] indicates note-on or note-off event for one of 128 MIDI pitches
-        - Velocity: [128 values] indicates a velocity change to be applied to all subsequent note events until the next velocity event
-        - Time: [6000 values] absolute time location w/in a segment, quantized into 10ms bins; this time will apply to all subsequent note events until the next time event
-            - Must appear in chronological order
-            - Define vocab with times up to 60 seconds for flexibility, but because time resets for each segment, in practice we use only the first hundred events of this type
-        - EOS: [1 value] Indicates the end of the sequence
+    * Heavily inspired by the messages defined in the MIDI specification
+    * **Vocabulary**:
+        * Note: [128 values] indicates note-on or note-off event for one of 128 MIDI pitches
+        * Velocity: [128 values] indicates a velocity change to be applied to all subsequent note events until the next velocity event
+        * Time: [6000 values] absolute time location w/in a segment, quantized into 10ms bins; this time will apply to all subsequent note events until the next time event
+            * Must appear in chronological order
+            * Define vocab with times up to 60 seconds for flexibility, but because time resets for each segment, in practice we use only the first hundred events of this type
+        * EOS: [1 value] Indicates the end of the sequence
 
 ## Parameters/Architecture Details from Hawthorne et al. 
 - Embedded size: 512

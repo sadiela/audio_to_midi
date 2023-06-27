@@ -1,19 +1,34 @@
 import pretty_midi
-import yaml
-from midi2audio import FluidSynth
+#from midi2audio import FluidSynth
 import os
 from pathlib import Path
-import numpy as np
 import pretty_midi
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
 import os
 import sys
+import multiprocessing
+import shutil
 
 SOUNDFONT_PATH = "/Users/sadiela/Documents/phd/research/music/sound_fonts/GeneralUser_GS_v1.471.sf2"
+
+# Python program to store list to file using pickle module
+import pickle
+
+# write list to binary file
+def write_list(a_list, fname):
+    # store list in binary file so 'wb' mode
+    with open(fname, 'wb') as fp:
+        pickle.dump(a_list, fp)
+        print('Done writing list into a binary file')
+
+# Read list to memory
+def read_list(fname):
+    # for reading also binary mode is important
+    with open(fname, 'rb') as fp:
+        n_list = pickle.load(fp)
+        return n_list
 
 def sep_and_crop(midi_directory, target_directory):
     # if folder doesn't exist, create it
@@ -54,12 +69,25 @@ def sep_and_crop(midi_directory, target_directory):
     print("NUMBER ERRORS:", num_errors)
 
 
-def midi_to_wav(midi_path,wav_path):
+'''def midi_to_wav(midi_path,wav_path):
         # using the default sound font in 44100 Hz sample rate
         fs = FluidSynth(sound_font=SOUNDFONT_PATH)
-        fs.midi_to_audio(midi_path, wav_path)
+        fs.midi_to_audio(midi_path, wav_path)'''
 
-def midis_to_wavs(midi_dir, wav_dir=None):
+# can parallelize these conversions since I have 8 CPU cores
+def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
+    for midi in midi_files: 
+        output_path = wav_dir +'/' + midi[:-3]+'wav'
+        midi_path = midi_dir + '/' + midi
+        cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+        print(cmd)
+        ret_status = os.system(cmd)
+        if ret_status != 0:
+            print("RETURN STATUS:", ret_status)
+            sys.exit(ret_status)
+        
+    
+def midis_to_wavs_multi(midi_dir, wav_dir=None, num_processes=1):
     if wav_dir == None: 
         wav_dir = midi_dir
     if not os.path.isdir(str(wav_dir)):
@@ -68,17 +96,48 @@ def midis_to_wavs(midi_dir, wav_dir=None):
     midi_dir_list = os.listdir(midi_dir)
     # skip files that have already been converted
     midi_list = [f for f in midi_dir_list if f[-3:] == 'mid' and not os.path.isfile(str(wav_dir) +'/' + f[:-3]+'wav')]
-    for midi in midi_list: 
-        midi_to_wav(str(midi_dir) + '/' + midi, str(wav_dir) +'/' + midi[:-3]+'wav')
-    
-# can parallelize these conversions since I have 8 CPU cores
+
+    print("LIST LEN:", len(midi_list))
+    input("Continue...")
+    # split into chunks:
+    chunk_size = len(midi_list) // num_processes
+    midi_chunks = [midi_list[i:i+chunk_size] for i in range(0, len(midi_list), chunk_size)]
+
+    # create a list of processes
+    print("Starting processes:", len(midi_chunks))
+    print(midi_dir, wav_dir)
+    processes = []
+    for i in range(num_processes):
+        process = multiprocessing.Process(target=process_midis_to_wavs, args=(midi_chunks[i],str(midi_dir), str(wav_dir)))
+        process.start()
+        processes.append(process)
+
+    # wait for all processes to finish
+    for process in processes:
+        process.join()
+
+def gen_small_dataset(midi_folder, raw_audio_folder): 
+    midi_files = os.listdir(midi_folder)
+    process_midis_to_wavs(midi_files, midi_folder, raw_audio_folder)
+
 
 if __name__ == '__main__':
+    #small_midi = './small_matched_data/midi'
+    #small_raw_audio = './small_matched_data/raw_audio'
+    #gen_small_dataset(small_midi, small_raw_audio)
+    #sys.exit(1)
+
     print("Converting tracks to raw audio")
     midi_stub = './lmd_full/'
     track_stub = './lmd_tracks/'
     raw_audio_stub = './raw_audio/'
     folder_extensions = ['2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
+
+    e = '0'
+    cur_track_folder = track_stub + e 
+    cur_raw_audio = raw_audio_stub + e
+
+    midis_to_wavs_multi(cur_track_folder, wav_dir=cur_raw_audio, num_processes=4)
 
     # separate MIDIs into tracks and crop empty starts
     '''for e in folder_extensions: 
@@ -88,12 +147,29 @@ if __name__ == '__main__':
         sep_and_crop(Path(cur_midi_folder), Path(cur_track_folder))'''
 
     # convert MIDIs to wavs
-    for e in folder_extensions:
-        cur_track_folder = track_stub + e 
-        cur_raw_audio = raw_audio_stub + e
-        midis_to_wavs(cur_track_folder, cur_raw_audio)
-        print("FINSIHED", e)
+    #for e in folder_extensions:
+    
+    # get list of files in cur_raw_audio 
+    #rawaudio_file_list = os.listdir(cur_raw_audio)
+    #print(len(rawaudio_file_list))
+
+    #write_list(rawaudio_file_list, 'converted_midis_new.p') # 11246 files
+    #flist = read_list('converted_midis_new.p')
+    #print('List is', len(flist), flist[0:25])
 
 
+    '''small_midi = './small_matched_data/midi'
+    small_raw_audio = './small_matched_data/raw_audio'
 
+    raw_audio_files = ['26709364ebef444f80ce611a35cb04e0_5.wav', '21d50e25cc605b51c4a18addc1fa7a32_8.wav', '226fd106ad791a971d1d3c2a36164567_3.wav', '2146be0df514d22b66a801d164cc4392_14.wav', '23ae70e204549444ec91c9ee77c3523a_6.wav', '212abd583fe23890d0eae5f2b1f76aa2_0.wav', '236b22aca291dd04cbe49805e5104e09_0.wav', '20f7ffe70fc4cd23452603822318dae3_3.wav', '21e13737532a3730af28517d9836612e_5.wav', '24f40f00caa71bfcd0ab0fc3363b57c0_4.wav', '21276e9ddc992361a8b35edd5f118683_2.wav', '2577f484437ed2e01e053b6e8850bb7f_16.wav', '23660fbd19b6c5860d31eef6f1e2d1e1_1.wav', '20e763d48993f42f24d2daf6cf27068c_3.wav', '2403be827ea8072efd350d4dc4b9b0e3_5.wav', '205b4e193c2b1f2e7d63457fa61f5d1d_2.wav', '2470613bcf7a32c5874370245190653e_1.wav', '25d18450c9a3e5c4b6142362d67a2e3d_3.wav', '21b14d818ef5e347ff051e56f71f653a_12.wav', '2403fded92adb988145aac237dc5f6ee_3.wav', '25f924b83c209ebada9e4653bb44a714_5.wav', '2673f319aeb609cdad8b6ce30c39cf66_2.wav', '268957bbebbe84b3a8033f4e60957010_1.wav', '2147ff3314711da1cf12071335f7bfdc_1.wav', '20428139d7f12c0678e31fa27b42b342_5.wav']
+    for f in raw_audio_files:
+        print(f)
+        shutil.copy(cur_track_folder + '/' + f[:-3] + 'mid', small_midi)
+        shutil.copy(cur_raw_audio + '/' + f, small_raw_audio)
+
+        # copy files into small_matched_data
+
+
+    #midis_to_wavs_multi(cur_track_folder, cur_raw_audio, num_processes=4)
+    #print("FINSIHED", e)'''
 

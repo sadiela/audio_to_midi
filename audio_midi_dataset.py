@@ -4,6 +4,8 @@ from pathlib import Path
 import pickle 
 import os
 import numpy as np
+from spectrograms import *
+import pretty_midi 
 
 class MidiDataset(Dataset):
     """Midi dataset."""
@@ -21,34 +23,31 @@ class MidiDataset(Dataset):
         # f[:-3]+'wav'
         #self.midi_paths = [ Path(midi_file_dir) / str(f[:-3]+'wav') for file in self.audio_file_list]
 
-
     def __getitem__(self, index):
-        # choose random file path from directory (not already chosen), chunk it 
-        #cur_data = torch.load(self.paths[index])
-        #print(self.paths[index])
-        with open(self.paths[index], 'rb') as f:
-          pickled_tensor = pickle.load(f)
-        cur_data = torch.tensor(pickled_tensor.toarray()).clone().detach().float()
+        # MELSPECTROGRAMS
+        print(self.audio_dir + self.audio_file_list[index], self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
+        # load raw audio waveform
+        y, sr = librosa.load(self.audio_dir + self.audio_file_list[index], sr=SAMPLE_RATE)
+        # split into non-overlapping segments (~4 secs long)
+        y = split_audio(y,SEG_LENGTH)
+        # convert to melspectrograms
+        M =  librosa.feature.melspectrogram(y=y, sr=sr, 
+              hop_length=HOP_WIDTH, 
+              n_fft=FFT_SIZE, 
+              n_mels=NUM_MEL_BINS, 
+              fmin=MEL_LO_HZ, fmax=7600.0)
+        # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
+        M_transposed = np.transpose(M, (2, 0, 1)) # append EOS TO THE END OF EACH SEQUENCE!
+        # logscale magnitudes
+        M_db = librosa.power_to_db(M_transposed, ref=np.max)
 
-        p, l_i = cur_data.shape
-        # make sure divisible by l
-        # CHUNK! 
-        #print("DATA SHAPE:", cur_data.shape)
-        if l_i // self.l == 0: 
-          padded_data = torch.zeros((p, self.l))
-          padded_data[:,0:l_i] = cur_data
-          l_i=self.l
-        else: 
-          padded_data = cur_data[:,:(cur_data.shape[1]-(cur_data.shape[1]%self.l))]
-        
-        chunked = torch.reshape(padded_data, (l_i//self.l,1, p, self.l)) 
-        chunked = chunked[chunked.sum(dim=(2,3)) != 0]         # Remove empty areas
-        chunked = torch.reshape(chunked, (chunked.shape[0], 1, p, self.l)) 
+        # LOAD MIDI
+        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
+        for note in midi.instruments[0].notes:
+           print(note)
+           
+        return M_db 
 
-        if chunked.shape[0] != 0:
-            return chunked # 3d tensor: l_i\\l x p x l
-        else:
-            return None
 
     def __getname__(self, index):
         return self.paths[index]

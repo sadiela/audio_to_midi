@@ -1,17 +1,11 @@
-import pretty_midi
-#from midi2audio import FluidSynth
 import os
-from pathlib import Path
 import pretty_midi
 from tqdm import tqdm
-from pathlib import Path
-from numpy import ndarray
-import os
+#from numpy import ndarray
 import sys
 import multiprocessing
-import shutil
 
-SOUNDFONT_PATH = "/Users/sadiela/Documents/phd/research/music/sound_fonts/GeneralUser_GS_v1.471.sf2"
+SOUNDFONT_PATH = "./GeneralUser_GS_v1.471.sf2"
 
 # Python program to store list to file using pickle module
 import pickle

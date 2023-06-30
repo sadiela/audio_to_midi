@@ -1,6 +1,6 @@
 import os
 import pretty_midi
-from tqdm import tqdm
+import numpy as np
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
@@ -45,7 +45,6 @@ def pretty_midi_to_seq_chunks(open_midi):
     cur_seg = 0
     previous_note_time = 0.0
     for note in open_midi.instruments[0].notes:
-        print(note)
         if note.start > SEG_LENGTH_SECS*(cur_seg+1):
             #print("STARTING NEW SEGMENT")
             cur_seg = int((note.start // SEG_LENGTH_SECS))
@@ -58,19 +57,20 @@ def pretty_midi_to_seq_chunks(open_midi):
             if rounded_offset != 0.0:
                 event_sequences[cur_seg].append(event_idxs[rounded_offset])
         event_sequences[cur_seg].append(event_idxs["NOTE:"+str(note.pitch)])
-        #print("SEQUENCE:", event_sequences, [event_dictionary[i] for i in event_sequences[cur_seg]])
         #input("Continue...")
         previous_note_time = note.start
+    #print("SEQUENCE:", event_sequences, [event_dictionary[i] for i in event_sequences[cur_seg]])
     for seq in event_sequences:
         seq.append(0) # APPEND EOS TOKENS
-        print(len(seq))
+        #print(len(seq))
     # NOW PAD THEM ALL TO THE LENGTH OF THE LONGEST ONE!
     longest_seq = max([len(seq) for seq in event_sequences])
     print("LONGEST:", longest_seq)
     for seq in event_sequences:
         while (len(seq)) < longest_seq:
             seq.append(1) # PADDING!
-    return event_sequences
+    array_seqs = np.array(event_sequences).T
+    return array_seqs
 
 def midi_to_wav(midi_path,wav_path):
     print("CONVERTING")
@@ -94,6 +94,8 @@ if __name__ == '__main__':
         print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
         seq_chunks = pretty_midi_to_seq_chunks(open_midi)
-        seq_chunks_to_pretty_midi(seq_chunks, target_dir)
-        midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
+        as_array=np.array(seq_chunks)
+        print("ARRAY SHAPE:", as_array.T.shape, as_array.T[:,0], as_array.T[0,:])
+        #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
+        #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
         input("Continue...")

@@ -3,9 +3,10 @@ from torch.utils.data import Dataset
 from pathlib import Path
 import pickle 
 import os
+import pretty_midi 
 import numpy as np
 from spectrograms import *
-import pretty_midi 
+from midi_vocabulary import *
 
 class MidiDataset(Dataset):
     """Midi dataset."""
@@ -43,10 +44,9 @@ class MidiDataset(Dataset):
 
         # LOAD MIDI
         midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
-        for note in midi.instruments[0].notes:
-           print(note)
-           
-        return M_db 
+        array_seqs = pretty_midi_to_seq_chunks(midi)
+  
+        return M_db, array_seqs
 
 
     def __getname__(self, index):
@@ -55,13 +55,15 @@ class MidiDataset(Dataset):
     def __len__(self):
         return len(self.paths)
 
-def collate_fn(data, collate_shuffle=True): # I think this should still work
+
+# FIX COLLATE
+def collate_fn(data, collate_shuffle=True, batch_size=128): # I think this should still work
   # data is a list of 2d tensors; concatenate and shuffle all list items
   data = list(filter(lambda x: x is not None, data))
   #print(len(data))
   full_list = torch.cat(data, 0) # concatenate all data along the first axis
   if collate_shuffle:
     idx = torch.randperm(full_list.shape[0])
-    return  full_list[idx].view(full_list.size())
+    return  full_list[idx].view(full_list.size())[:,batch_size]
   else:
-    return full_list
+    return full_list[:,batch_size]

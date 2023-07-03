@@ -5,16 +5,18 @@ import numpy as np
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
 SOUNDFONT_PATH = "./GeneralUser_GS_v1.471.sf2"
+MAX_LENGTH=1024
 
 
 event_dictionary = {}
 event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
-for i in range(2,130):
-    event_dictionary[i] = 'NOTE:' + str(i-2)
+event_dictionary[2] = '<BOS>'
+for i in range(3,131):
+    event_dictionary[i] = 'NOTE:' + str(i-3)
 
-for i in range(130,631):
-    event_dictionary[i] = round(0.01*(i-129),2)
+for i in range(131,632):
+    event_dictionary[i] = round(0.01*(i-130),2)
 
 event_idxs = {v: k for k, v in event_dictionary.items()}
 
@@ -34,13 +36,14 @@ def seq_chunks_to_pretty_midi(seq_chunks, target_dir):
                 break # end of this chunk
     
     cur_midi.instruments.append(cur_inst)
-    if not os.path.exists(target_dir + 'seq_conversion1.mid'):
-        cur_midi.write(str(target_dir + 'seq_conversion1.mid'))
-        
+    return cur_midi
+    #if not os.path.exists(target_dir + 'seq_conversion1.mid'):
+    #    cur_midi.write(str(target_dir + 'seq_conversion1.mid'))
 
 def pretty_midi_to_seq_chunks(open_midi): 
     note_starts = [note.start for note in open_midi.instruments[0].notes]
-    num_segs = int((note_starts[-1] // SEG_LENGTH_SECS)) + 1
+    note_ends = [note.end for note in open_midi.instruments[0].notes]
+    num_segs = int((note_ends[-1] // SEG_LENGTH_SECS)) + 1
     event_sequences = [[] for _ in range(num_segs)]
     cur_seg = 0
     previous_note_time = 0.0
@@ -65,9 +68,9 @@ def pretty_midi_to_seq_chunks(open_midi):
         #print(len(seq))
     # NOW PAD THEM ALL TO THE LENGTH OF THE LONGEST ONE!
     longest_seq = max([len(seq) for seq in event_sequences])
-    print("LONGEST:", longest_seq)
+    #print("LONGEST:", longest_seq)
     for seq in event_sequences:
-        while (len(seq)) < longest_seq:
+        while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
     return array_seqs
@@ -94,8 +97,7 @@ if __name__ == '__main__':
         print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
         seq_chunks = pretty_midi_to_seq_chunks(open_midi)
-        as_array=np.array(seq_chunks)
-        print("ARRAY SHAPE:", as_array.T.shape, as_array.T[:,0], as_array.T[0,:])
+        print("ARRAY SHAPE:", type(seq_chunks), seq_chunks.shape, seq_chunks[:,0], seq_chunks[0,:])
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
         input("Continue...")

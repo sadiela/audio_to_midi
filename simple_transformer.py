@@ -23,7 +23,8 @@ def create_mask(src, tgt):
     tgt_mask = generate_square_subsequent_mask(tgt_seq_len)
     src_mask = torch.zeros((src_seq_len, src_seq_len),device=DEVICE).type(torch.bool)
 
-    src_padding_mask = (src == PAD_IDX).transpose(0, 1)
+    #src_padding_mask = (src == PAD_IDX).transpose(0, 1)
+    src_padding_mask = torch.zeros(src.shape[1], src.shape[0]).to(bool) # think this should work now. All 0s because no padding
     tgt_padding_mask = (tgt == PAD_IDX).transpose(0, 1)
     return src_mask, tgt_mask, src_padding_mask, tgt_padding_mask
 
@@ -77,19 +78,22 @@ class Seq2SeqTransformer(nn.Module):
                                        dim_feedforward=dim_feedforward,
                                        dropout=dropout)
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
-        self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size) # I will skip this because we are passing in spectrograms
+        #self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size) # I will skip this because we are passing in spectrograms
+        self.feedforward_src_emb = nn.Linear(emb_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size) # will still need this 
         self.positional_encoding = PositionalEncoding(
             emb_size, dropout=dropout)
 
-    def forward(self, src: Tensor, trg: Tensor, src_mask: Tensor, tgt_mask: Tensor,
+    def forward(self, src, trg, src_mask, tgt_mask,
                 src_padding_mask: Tensor, tgt_padding_mask: Tensor,
                 memory_key_padding_mask: Tensor):
         # SRC_MASK SHAPE: SRC_MAX_BATCH_SEQ_LEN x SRC_MAX_BATCH_SEQ_LEN
         # TGT_MASK SHAPE: TGT_MAX_BATCH_SEQ_LEN x TGT_MAX_BATCH_SEQ_LEN
         # SRC_PADDING_MASK SHAPE: BATCH_SIZE x SRC_MAX_BATCH_SEQ_LEN
         # TGT_PADDING_MASK SHAPE: BATCH_SIZE x TGT_MAX_BATCH_SEQ_LEN
-        src_emb = self.positional_encoding(self.src_tok_emb(src)) # won't need this step
+        src_emb = self.feedforward_src_emb(src) # we just need it the right shape...?
+        #print("SRC POST DENSE LAYER:", src.shape)
+        src_emb = self.positional_encoding(src_emb) # won't need this step
         tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
         # SRC SHAPE: SRC_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
         # TRG SHAPE: TGT_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
@@ -100,24 +104,31 @@ class Seq2SeqTransformer(nn.Module):
         return self.generator(outs)
 
     def encode(self, src: Tensor, src_mask: Tensor):
-        return self.transformer.encoder(self.positional_encoding(
-                            self.src_tok_emb(src)), src_mask)
+        src_emb = self.feedforward_src_emb(src) # we just need it the right shape...?
+        #print("SRC POST DENSE LAYER:", src.shape)
+        src_emb = self.positional_encoding(src_emb) # won't need this step
+        return self.transformer.encoder(src_emb, src_mask)
 
     def decode(self, tgt: Tensor, memory: Tensor, tgt_mask: Tensor):
-        return self.transformer.decoder(self.positional_encoding(
-                          self.tgt_tok_emb(tgt)), memory,
+        tgt_emb = self.tgt_tok_emb(tgt)
+        tgt_emb = self.positional_encoding(tgt_emb)
+        print("T EMB SHAPE:", tgt_emb.shape)
+        return self.transformer.decoder(tgt_emb, memory,
                           tgt_mask)
     
     def greedy_decode(self, src, src_mask, max_len, start_symbol):
-        src = src.to(DEVICE)
+        src = src.to(DEVICE).to(torch.float32)
         src_mask = src_mask.to(DEVICE)
-
         memory = self.encode(src, src_mask)
+
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
+        print("ys:", ys.shape, ys)
         for i in range(max_len-1):
             memory = memory.to(DEVICE)
+            print("MEM SHAPE:", memory.shape)
             tgt_mask = (generate_square_subsequent_mask(ys.size(0))
                         .type(torch.bool)).to(DEVICE)
+            print("TIME TO DECODE")
             out = self.decode(ys, memory, tgt_mask)
             out = out.transpose(0, 1)
             prob = self.generator(out[:, -1])

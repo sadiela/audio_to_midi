@@ -27,7 +27,7 @@ def compute_spectrogram(samples):
 
 def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1):
     """ Split audio into frames """
-    print(signal.shape)
+    #print(signal.shape)
     signal_length = signal.shape[0]
     num_frames = signal_length // segment_length
     rest_samples = signal_length % segment_length
@@ -38,9 +38,6 @@ def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1):
     frames = signal.reshape(int(len(signal)/segment_length),segment_length)
     return frames
   
-#def flatten_frames(frames):
-#    return torch.reshape(frames, (-1,))
-
 def plot_spec(M_db):
     fig, ax = plt.subplots()
     img = librosa.display.specshow(data=M_db, sr=sr, n_fft=FFT_SIZE, hop_length=HOP_WIDTH, y_axis='mel', x_axis='time', ax=ax)

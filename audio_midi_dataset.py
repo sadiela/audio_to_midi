@@ -9,6 +9,8 @@ from spectrograms import *
 from midi_vocabulary import *
 import random
 
+LEARNABLE_EOS = np.random.rand(1,NUM_MEL_BINS)
+
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):
         """
@@ -20,7 +22,6 @@ class AudioMidiDataset(Dataset):
         self.midi_dir = midi_file_dir
         self.audio_file_list = os.listdir(self.audio_dir) # WILL END IN .wav!!!
         self.audio_paths = [ Path(audio_file_dir) / f for f in self.audio_file_list if f[-3:] == 'wav' ]
-        self.learnable_eos = np.random.rand(1,NUM_MEL_BINS)
         # f[:-3]+'wav'
         #self.midi_paths = [ Path(midi_file_dir) / str(f[:-3]+'wav') for file in self.audio_file_list]
 
@@ -37,7 +38,7 @@ class AudioMidiDataset(Dataset):
               fmin=MEL_LO_HZ, fmax=7600.0)
         # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
         M_transposed = np.transpose(M, (2, 0, 1)) # append EOS TO THE END OF EACH SEQUENCE!
-        eos_block = self.learnable_eos * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS))
+        eos_block = LEARNABLE_EOS * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS))
         M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=0)
         # TARGET SIZE: 512x6x512
         # logscale magnitudes
@@ -73,7 +74,6 @@ def collate_fn(data, collate_shuffle=True, batch_size=128): # I think this shoul
   #print(len(data))
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
-  print("NEW SHAPES",full_spec_list.shape,full_midi_list.shape)
 
   return full_spec_list, full_midi_list
 

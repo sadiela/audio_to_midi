@@ -65,8 +65,9 @@ class Seq2SeqTransformer(nn.Module):
                  num_decoder_layers: int,
                  emb_size: int,
                  nhead: int,
-                 src_vocab_size: int,
+                 #src_vocab_size: int,
                  tgt_vocab_size: int,
+
 
                  dim_feedforward: int = 512,
                  dropout: float = 0.1):
@@ -76,7 +77,7 @@ class Seq2SeqTransformer(nn.Module):
                                        num_encoder_layers=num_encoder_layers,
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
-                                       dropout=dropout)
+                                       dropout=dropout, activation='gelu')
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         #self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size) # I will skip this because we are passing in spectrograms
         self.feedforward_src_emb = nn.Linear(emb_size, emb_size)
@@ -97,11 +98,16 @@ class Seq2SeqTransformer(nn.Module):
         tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
         # SRC SHAPE: SRC_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
         # TRG SHAPE: TGT_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
-        outs = self.transformer(src_emb, tgt_emb, src_mask, tgt_mask, None,
-                                src_padding_mask, tgt_padding_mask, memory_key_padding_mask)
+        #outs = self.transformer(src_emb, tgt_emb, src_mask, tgt_mask, None,
+        #                        src_padding_mask, tgt_padding_mask, memory_key_padding_mask) # what's going on in here...
+        memory = self.transformer.encoder(src, mask=src_mask, src_key_padding_mask=src_padding_mask)
+        
+        output = self.transformer.decoder(tgt_emb, memory, tgt_mask=tgt_mask,
+                              tgt_key_padding_mask=tgt_padding_mask,
+                              memory_key_padding_mask=memory_key_padding_mask)
         # OUT SHAPE: TGT_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM pre-generator
         #            TGT_MAX_BATCH_SEQ_LEN x BATCH_SIZE x TGT_VOCAB_SIZE post-generator
-        return self.generator(outs)
+        return self.generator(output)
 
     def encode(self, src: Tensor, src_mask: Tensor):
         src_emb = self.feedforward_src_emb(src) # we just need it the right shape...?
@@ -120,16 +126,14 @@ class Seq2SeqTransformer(nn.Module):
         src = src.to(DEVICE).to(torch.float32)
         src_mask = src_mask.to(DEVICE)
         memory = self.encode(src, src_mask)
-
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
         print("ys:", ys.shape, ys)
         for i in range(max_len-1):
             memory = memory.to(DEVICE)
-            print("MEM SHAPE:", memory.shape)
             tgt_mask = (generate_square_subsequent_mask(ys.size(0))
                         .type(torch.bool)).to(DEVICE)
-            print("TIME TO DECODE")
-            out = self.decode(ys, memory, tgt_mask)
+            print(ys.shape, memory.shape, tgt_mask.shape)
+            out = self.decode(ys, memory, tgt_mask) #k.shape[0], bsz * num_heads, head_dim
             out = out.transpose(0, 1)
             prob = self.generator(out[:, -1])
             _, next_word = torch.max(prob, dim=1)
@@ -143,13 +147,14 @@ class Seq2SeqTransformer(nn.Module):
 
     # actual function to translate input sentence into target language
     def translate(self, src_spec):
+        print("TRANSLATING:")
         self.eval()
         src = src_spec
         num_tokens = src.shape[0]
         src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
         tgt_tokens = self.greedy_decode(
-            src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
+            src, src_mask, max_len=1024, start_symbol=BOS_IDX).flatten()
         print("TARGET TOKENS:", tgt_tokens, tgt_tokens.shape)
-        pretty_obj = seq_chunks_to_pretty_midi(seq_chunks, target_dir)
+        pretty_obj = seq_chunks_to_pretty_midi(tgt_tokens, target_dir)
         return pretty_obj
     

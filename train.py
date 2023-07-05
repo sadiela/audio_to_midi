@@ -11,12 +11,12 @@ audio_dir = './small_matched_data/raw_audio/'
 SRC_VOCAB_SIZE = 512 #len(vocab_transform[SRC_LANGUAGE])
 TGT_VOCAB_SIZE = 631
 EMB_SIZE = 512
-NHEAD = 4
+NHEAD = 2
 FFN_HID_DIM = 512
 BATCH_SIZE = 2 # 256
 NUM_ENCODER_LAYERS = 2 #8
 NUM_DECODER_LAYERS = 2 #8
-NUM_EPOCHS = 5
+NUM_EPOCHS = 1
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models'
 
@@ -79,7 +79,7 @@ def evaluate(model, loss_fn):
 
 def training_setup():
     transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, EMB_SIZE,
-                                    NHEAD, SRC_VOCAB_SIZE, TGT_VOCAB_SIZE, FFN_HID_DIM)
+                                    NHEAD, TGT_VOCAB_SIZE, FFN_HID_DIM)
     for p in transformer.parameters():
         if p.dim() > 1:
             nn.init.xavier_uniform_(p)
@@ -98,13 +98,17 @@ def training_setup():
         val_loss = evaluate(transformer, loss_fn)
         print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
     
-    torch.save(transformer.state_dict(), MODEL_DIR + '/model1.pt')
+    torch.save(transformer.state_dict(), MODEL_DIR + '/model2.pt')
+    return transformer
 
 
 if __name__ == '__main__':
-    # save model
-    # LOAD
-    transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, EMB_SIZE, NHEAD, SRC_VOCAB_SIZE, TGT_VOCAB_SIZE, FFN_HID_DIM)
+
+    #transformer = training_setup()
+    # save model LOAD
+    transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, 
+                                     NUM_DECODER_LAYERS, EMB_SIZE,
+                                     NHEAD, TGT_VOCAB_SIZE, FFN_HID_DIM)
     transformer.load_state_dict(torch.load(MODEL_DIR + '/model1.pt'))
     transformer.to(DEVICE).eval()
 
@@ -127,7 +131,7 @@ if __name__ == '__main__':
 
     print(M_db.shape)
     print("READY TO TRANSLATE")
+    new_M_db = M_db[:,[0],:]
+    print(new_M_db.shape)
     
-    transformer.translate(torch.tensor(M_db))
-
-    input("Continue...")
+    transformer.translate(torch.tensor(new_M_db))

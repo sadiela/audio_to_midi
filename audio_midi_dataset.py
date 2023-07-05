@@ -48,7 +48,7 @@ class AudioMidiDataset(Dataset):
         midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
         midi_seqs = pretty_midi_to_seq_chunks(midi)
 
-        empty_section_idxs = np.where(midi_seqs[0,:] == 0)[0]
+        empty_section_idxs = np.where(midi_seqs[1,:] == 0)[0]
         M_db_clean = np.delete(M_db, empty_section_idxs, axis=1)
         midi_seqs_clean = np.delete(midi_seqs, empty_section_idxs, axis=1)
 

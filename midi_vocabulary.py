@@ -40,11 +40,15 @@ def seq_chunks_to_pretty_midi(seq_chunks, target_dir):
     #if not os.path.exists(target_dir + 'seq_conversion1.mid'):
     #    cur_midi.write(str(target_dir + 'seq_conversion1.mid'))
 
+def pretty_midi_to_seq_chunks_2(open_midi): 
+    note_starts = [note.start for note in open_midi.instruments[0].notes]
+    note_ends = [note.end for note in open_midi.instruments[0].notes]
+
 def pretty_midi_to_seq_chunks(open_midi): 
     note_starts = [note.start for note in open_midi.instruments[0].notes]
     note_ends = [note.end for note in open_midi.instruments[0].notes]
     num_segs = int((note_ends[-1] // SEG_LENGTH_SECS)) + 1
-    event_sequences = [[] for _ in range(num_segs)]
+    event_sequences = [[2] for _ in range(num_segs)] # Start with BOS TOKEN
     cur_seg = 0
     previous_note_time = 0.0
     for note in open_midi.instruments[0].notes:
@@ -67,7 +71,7 @@ def pretty_midi_to_seq_chunks(open_midi):
         seq.append(0) # APPEND EOS TOKENS
         #print(len(seq))
     # NOW PAD THEM ALL TO THE LENGTH OF THE LONGEST ONE!
-    longest_seq = max([len(seq) for seq in event_sequences])
+    #longest_seq = max([len(seq) for seq in event_sequences])
     #print("LONGEST:", longest_seq)
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:

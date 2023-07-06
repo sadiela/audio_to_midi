@@ -2,6 +2,7 @@ import os
 import pretty_midi
 import numpy as np
 import sys
+import matplotlib.pyplot as plt
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
@@ -20,6 +21,58 @@ for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
 
 event_idxs = {v: k for k, v in event_dictionary.items()}
+
+def custom_plot_pianoroll(
+    midi_object, 
+    minc: int = -2,maxc: int = 7,
+    resolution: int = 24,
+    cmap: str = "Blues",
+    grid_axis: str = "both",
+    grid_linestyle: str = ":",
+    grid_linewidth: float = 0.5,
+    vmax=1,ymin=None,ymax=None,
+    **kwargs,
+    ):
+
+    pianoroll = midi_object.instruments[0].get_piano_roll()
+    _, ax = plt.subplots()
+
+
+    img = ax.imshow(pianoroll,
+        cmap=cmap,aspect="auto",vmin=0,
+        vmax=vmax, # if pianoroll.dtype == np.bool_ else 127,
+        origin="lower",interpolation="none",
+        **kwargs,
+    )
+
+    ax.set_yticks(np.arange(12*(minc+2), 12*(maxc+3), 12))
+    ax.set_yticklabels([f"C{minc+i}" for i in range(maxc-minc+1)], fontsize=12)
+
+    nonzero_row_indices = np.nonzero(np.count_nonzero(pianoroll, axis=1))
+    if not ymin:
+        ymin = np.min(nonzero_row_indices) - 12
+    if not ymax: 
+        ymax = np.max(nonzero_row_indices) + 12
+
+    ax.set_ylim([ymin, ymax])
+    ax.set_ylabel("Pitch", fontsize=14)
+
+    # Format x-axis
+    ax.set_xticks(np.arange(-0.5, pianoroll.shape[1], resolution)) # put labels
+    ax.set_xticklabels(np.arange(0, pianoroll.shape[1]//resolution +1, 1), fontsize=12)
+    ax.set_xlim([-0.5, pianoroll.shape[1]])
+    ax.set_xlabel("Time (beats)", fontsize=14)
+
+    if grid_axis != "off":
+        ax.grid(
+            axis='x', # or "both"
+            color="k",
+            linestyle=grid_linestyle,
+            linewidth=grid_linewidth,
+        )
+
+    plt.show()
+    return img
 
 def seq_chunks_to_pretty_midi(seq_chunks):
     cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!

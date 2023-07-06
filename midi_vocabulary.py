@@ -1,6 +1,7 @@
 import os
 import pretty_midi
 import numpy as np
+import sys
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
@@ -20,7 +21,7 @@ for i in range(131,632):
 
 event_idxs = {v: k for k, v in event_dictionary.items()}
 
-def seq_chunks_to_pretty_midi(seq_chunks, target_dir):
+def seq_chunks_to_pretty_midi(seq_chunks):
     cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!
     cur_inst = pretty_midi.Instrument(program=1)
     for i, chunk in enumerate(seq_chunks):
@@ -28,7 +29,8 @@ def seq_chunks_to_pretty_midi(seq_chunks, target_dir):
         cur_time = base_time
         for event in chunk: 
             if event in range(2, 130): # NOTE EVENT!
-                note = pretty_midi.Note(velocity=100, pitch=event-2, start=cur_time, end=cur_time + 0.25)
+                print(event_dictionary[i])
+                note = pretty_midi.Note(velocity=100, pitch=event-3, start=cur_time, end=cur_time + 0.25)
                 cur_inst.notes.append(note)
             elif event in range(130,631): # TIME SHIFT!
                 cur_time = base_time + event_dictionary[event]
@@ -89,6 +91,9 @@ def midi_to_wav(midi_path,wav_path):
 
 
 if __name__ == '__main__':
+
+    print(pretty_midi.program_to_instrument_name(1))
+    sys.exit(0)
     midi_directory = './small_matched_data/midi/'
     mid_files = os.listdir(midi_directory)
     target_dir = './small_matched_data/midi_reconverted/'

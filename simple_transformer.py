@@ -67,8 +67,6 @@ class Seq2SeqTransformer(nn.Module):
                  nhead: int,
                  #src_vocab_size: int,
                  tgt_vocab_size: int,
-
-
                  dim_feedforward: int = 512,
                  dropout: float = 0.1):
         super(Seq2SeqTransformer, self).__init__()
@@ -77,7 +75,7 @@ class Seq2SeqTransformer(nn.Module):
                                        num_encoder_layers=num_encoder_layers,
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
-                                       dropout=dropout, activation='gelu')
+                                       dropout=dropout, activation='gelu') # 
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         #self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size) # I will skip this because we are passing in spectrograms
         self.feedforward_src_emb = nn.Linear(emb_size, emb_size)
@@ -88,11 +86,12 @@ class Seq2SeqTransformer(nn.Module):
     def forward(self, src, trg, src_mask, tgt_mask,
                 src_padding_mask: Tensor, tgt_padding_mask: Tensor,
                 memory_key_padding_mask: Tensor):
+        # SRC: SCR_MAX_SEQ_LENGTH x BATCH_SIZE x MELSPEC_BINS # 512...
         # SRC_MASK SHAPE: SRC_MAX_BATCH_SEQ_LEN x SRC_MAX_BATCH_SEQ_LEN
         # TGT_MASK SHAPE: TGT_MAX_BATCH_SEQ_LEN x TGT_MAX_BATCH_SEQ_LEN
         # SRC_PADDING_MASK SHAPE: BATCH_SIZE x SRC_MAX_BATCH_SEQ_LEN
         # TGT_PADDING_MASK SHAPE: BATCH_SIZE x TGT_MAX_BATCH_SEQ_LEN
-        src_emb = self.feedforward_src_emb(src) # we just need it the right shape...?
+        src_emb = self.feedforward_src_emb(src) # we just need it the right shape...? # add activation? 
         #print("SRC POST DENSE LAYER:", src.shape)
         src_emb = self.positional_encoding(src_emb) # won't need this step
         tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
@@ -118,7 +117,6 @@ class Seq2SeqTransformer(nn.Module):
     def decode(self, tgt: Tensor, memory: Tensor, tgt_mask: Tensor):
         tgt_emb = self.tgt_tok_emb(tgt)
         tgt_emb = self.positional_encoding(tgt_emb)
-        print("T EMB SHAPE:", tgt_emb.shape)
         return self.transformer.decoder(tgt_emb, memory,
                           tgt_mask)
     
@@ -127,12 +125,12 @@ class Seq2SeqTransformer(nn.Module):
         src_mask = src_mask.to(DEVICE)
         memory = self.encode(src, src_mask)
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
-        print("ys:", ys.shape, ys)
+        #print("ys:", ys.shape, ys)
         for i in range(max_len-1):
             memory = memory.to(DEVICE)
             tgt_mask = (generate_square_subsequent_mask(ys.size(0))
                         .type(torch.bool)).to(DEVICE)
-            print(ys.shape, memory.shape, tgt_mask.shape)
+            #print(ys.shape, memory.shape, tgt_mask.shape)
             out = self.decode(ys, memory, tgt_mask) #k.shape[0], bsz * num_heads, head_dim
             out = out.transpose(0, 1)
             prob = self.generator(out[:, -1])
@@ -154,7 +152,7 @@ class Seq2SeqTransformer(nn.Module):
         src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
         tgt_tokens = self.greedy_decode(
             src, src_mask, max_len=1024, start_symbol=BOS_IDX).flatten()
-        print("TARGET TOKENS:", tgt_tokens, tgt_tokens.shape)
-        pretty_obj = seq_chunks_to_pretty_midi(tgt_tokens, target_dir)
-        return pretty_obj
+        print("TGT shape:",tgt_tokens.shape)
+        input("Continueee...")
+        return tgt_tokens
     

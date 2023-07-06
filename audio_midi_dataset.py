@@ -35,9 +35,9 @@ class AudioMidiDataset(Dataset):
         if midi_seqs_clean.shape[1] == 0:
             return None
         
-        chosen_chunk_idx = random.randint(0, midi_seqs_clean.shape[1]-1) # for now...
+        #chosen_chunk_idx = random.randint(0, midi_seqs_clean.shape[1]-1) # for now...
   
-        return torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
+        return torch.tensor(M_db_clean), torch.tensor(midi_seqs_clean) #torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
 
     def __getname__(self, index):
         return self.paths[index]
@@ -54,6 +54,9 @@ def collate_fn(data, collate_shuffle=True, batch_size=128): # I think this shoul
   #print(len(data))
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
+
+  print("FULL SPEC SHAPE:", full_spec_list.shape)
+  print("FULL MIDI SHAPE:", full_midi_list.shape)
 
   return full_spec_list, full_midi_list
 

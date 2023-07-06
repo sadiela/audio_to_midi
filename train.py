@@ -12,11 +12,11 @@ torch.manual_seed(0)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
-def train_epoch(model, optimizer, loss_fn):
+def train_epoch(model, optimizer, loss_fn, batch_size):
     model.train()
     losses = 0
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
-    train_dataloader = DataLoader(training_data, batch_size=BATCH_SIZE, collate_fn=collate_fn)
+    train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
     print("BEGINNING TRAINING LOOP")
     for src, tgt in train_dataloader:
@@ -46,12 +46,12 @@ def train_epoch(model, optimizer, loss_fn):
         #nput("Continue...")
     return losses / len(list(train_dataloader))
 
-def evaluate(model, loss_fn):
+def evaluate(model, loss_fn, batch_size):
     model.eval()
     losses = 0
 
     val_iter = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
-    val_dataloader = DataLoader(val_iter, batch_size=BATCH_SIZE, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_iter, batch_size=batch_size, collate_fn=collate_fn)
 
     for src, tgt in val_dataloader:
         src = src.to(DEVICE).to(torch.float32)
@@ -88,27 +88,13 @@ def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr):
         start_time = timer()
         train_loss = train_epoch(transformer, optimizer, loss_fn)
         end_time = timer()
-        val_loss = evaluate(transformer, loss_fn)
+        val_loss = evaluate(transformer, loss_fn, batch_size)
         print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
     
     return transformer
 
 def transcribe_midi(model, audio_file): 
-    y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
-    y = split_audio(y,SEG_LENGTH)
-    # convert to melspectrograms
-    M =  librosa.feature.melspectrogram(y=y, sr=sr, 
-              hop_length=HOP_WIDTH, 
-              n_fft=FFT_SIZE, 
-              n_mels=NUM_MEL_BINS, 
-              fmin=MEL_LO_HZ, fmax=7600.0)
-    # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
-    M_transposed = np.transpose(M, (2, 0, 1)) # append EOS TO THE END OF EACH SEQUENCE!
-    eos_block = LEARNABLE_EOS * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS))
-    M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=0)
-    # TARGET SIZE: 512x6x512
-    # logscale magnitudes
-    M_db = librosa.power_to_db(M_transposed, ref=np.max)
+    M_db = calc_mel_spec(audio_file=audio_file)
 
     # translate one chunk at a time    
     seq_chunks = [[] for _ in range(M_db.shape[1])] 
@@ -118,18 +104,7 @@ def transcribe_midi(model, audio_file):
 
     # convert sequence chunks to a pretty_midi object
     pretty_obj = seq_chunks_to_pretty_midi(seq_chunks)
-
-    
-
-    print("CONVERT TO MIDI")
-    if not os.path.exists(results_dir + 'translation.mid'):
-        pretty_obj.write(results_dir + 'translation.mid')
-
-    input("Continue to fs...")
-    output_path = results_dir + 'translation.wav'
-    midi_path = results_dir + 'translation.mid'
-    cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-    ret_status = os.system(cmd)
+    return pretty_obj
 
 
 if __name__ == '__main__':
@@ -155,7 +130,6 @@ if __name__ == '__main__':
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     results_file = modeldir + "/results.yaml"
 
-    # Read params from this file!
     # Make sure there is a parameter file! Need one to continue
     try: 
         with open(str(param_file)) as file: 
@@ -184,7 +158,12 @@ if __name__ == '__main__':
                         ffn_hidden, num_epochs, learning_rate)
     
     # SAVE MODEL
-    torch.save(transformer.state_dict(), MODEL_DIR + '/model2.pt')
+    torch.save(transformer.state_dict(), MODEL_DIR + '/model.pt')
+
+    print("TRANSCRIBING MIDI")
+    midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
+    print("PLOTTING MIDI")
+    img = custom_plot_pianoroll(midi_data)
 
 
     #transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)

@@ -9,8 +9,6 @@ from spectrograms import *
 from midi_vocabulary import *
 import random
 
-LEARNABLE_EOS = np.random.rand(1,NUM_MEL_BINS)
-
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):
         """
@@ -22,28 +20,10 @@ class AudioMidiDataset(Dataset):
         self.midi_dir = midi_file_dir
         self.audio_file_list = os.listdir(self.audio_dir) # WILL END IN .wav!!!
         self.audio_paths = [ Path(audio_file_dir) / f for f in self.audio_file_list if f[-3:] == 'wav' ]
-        # f[:-3]+'wav'
-        #self.midi_paths = [ Path(midi_file_dir) / str(f[:-3]+'wav') for file in self.audio_file_list]
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        y, sr = librosa.load(self.audio_dir + self.audio_file_list[index], sr=SAMPLE_RATE)
-        # split into non-overlapping segments (~4 secs long)
-        y = split_audio(y,SEG_LENGTH)
-        # convert to melspectrograms
-        M =  librosa.feature.melspectrogram(y=y, sr=sr, 
-              hop_length=HOP_WIDTH, 
-              n_fft=FFT_SIZE, 
-              n_mels=NUM_MEL_BINS, 
-              fmin=MEL_LO_HZ, fmax=7600.0)
-        # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
-        M_transposed = np.transpose(M, (2, 0, 1)) # append EOS TO THE END OF EACH SEQUENCE!
-        eos_block = LEARNABLE_EOS * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS))
-        M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=0)
-        # TARGET SIZE: 512x6x512
-        # logscale magnitudes
-        M_db = librosa.power_to_db(M_transposed, ref=np.max)
-
+        M_db = calc_mel_spec(audio_file = self.audio_dir + self.audio_file_list[index])
         # LOAD MIDI
         midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
         midi_seqs = pretty_midi_to_seq_chunks(midi)

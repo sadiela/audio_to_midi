@@ -12,18 +12,11 @@ NUM_MEL_BINS = 512 # input depth
 FFT_SIZE = 2048
 MEL_LO_HZ = 20.0
 FRAMES_PER_SECOND = SAMPLE_RATE / HOP_WIDTH
+LEARNABLE_EOS = np.random.rand(1,NUM_MEL_BINS)
 
 def num_samples(desired_length_in_seconds, sr): 
    # if you want 3 second chunks, how many samples do you need
    return 1/sr * desired_length_in_seconds
-
-def compute_spectrogram(samples):
-  overlap = 1 - (HOP_WIDTH / FFT_SIZE)
-  return librosa.feature.melspectrogram(y=samples, sr=SAMPLE_RATE, 
-        hop_length=HOP_WIDTH, 
-        n_fft=FFT_SIZE, 
-        n_mels=NUM_MEL_BINS, 
-        fmin=MEL_LO_HZ, fmax=7600.0)
 
 def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1):
     """ Split audio into frames """
@@ -46,25 +39,27 @@ def plot_spec(M_db):
     plt.show()
 
 def plot_whole_wav(y,sr):
-    M =  librosa.feature.melspectrogram(y=y, sr=sr, 
-                  hop_length=HOP_WIDTH, 
-                  n_fft=FFT_SIZE, 
-                  n_mels=NUM_MEL_BINS, 
-                  fmin=MEL_LO_HZ, fmax=7600.0)
-    M_db = librosa.power_to_db(M, ref=np.max)
+    M_db = calc_mel_spec(y=y, sr=sr)
     plot_spec(M_db)
 
 def plot_wav_chunk(y,sr, chunk_num=0): 
-    y = split_audio(y,SEG_LENGTH)
-    print("NEW SIG SHAPE:", y.shape)
-    M =  librosa.feature.melspectrogram(y=y, sr=sr, 
-            hop_length=HOP_WIDTH, 
-            n_fft=FFT_SIZE, 
-            n_mels=NUM_MEL_BINS, 
-            fmin=MEL_LO_HZ, fmax=7600.0)
-    mel_transposed = np.transpose(M, (2, 0, 1))
-    M_db = librosa.power_to_db(mel_transposed, ref=np.max)
+    M_db = calc_mel_spec(y=y, sr=sr)
     plot_spec(M_db[:,chunk_num,:].T) # first chunk
+
+def calc_mel_spec(audio_file=None, y=None, sr=None):
+    # can take either a file or y,sr
+    if audio_file is not None: 
+        y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
+    y = split_audio(y,SEG_LENGTH)
+    # convert to melspectrograms
+    M =  librosa.feature.melspectrogram(y=y, sr=sr, 
+              hop_length=HOP_WIDTH, n_fft=FFT_SIZE, 
+              n_mels=NUM_MEL_BINS, fmin=MEL_LO_HZ, fmax=7600.0)
+    M_transposed = np.transpose(M, (2, 0, 1)) # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
+    eos_block = LEARNABLE_EOS * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS)) # append EOS TO THE END OF EACH SEQUENCE!
+    M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=0)
+    M_db = librosa.power_to_db(M_transposed, ref=np.max) # logscale magnitudes
+    return M_db
 
 if __name__ == '__main__':
     raw_audio_folder = './small_matched_data/raw_audio/'

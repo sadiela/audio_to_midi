@@ -3,22 +3,14 @@ from simple_transformer import *
 from audio_midi_dataset import *
 from timeit import default_timer as timer
 import torch_optimizer as optim
+import argparse
+import yaml
+
 
 torch.manual_seed(0)
 
-midi_dir = './small_matched_data/midi/'
-audio_dir = './small_matched_data/raw_audio/'
-SRC_VOCAB_SIZE = 512 #len(vocab_transform[SRC_LANGUAGE])
-TGT_VOCAB_SIZE = 631
-EMB_SIZE = 512
-NHEAD = 2
-FFN_HID_DIM = 512
-BATCH_SIZE = 2 # 256
-NUM_ENCODER_LAYERS = 2 #8
-NUM_DECODER_LAYERS = 2 #8
-NUM_EPOCHS = 1
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_DIR = './models'
+MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn):
     model.train()
@@ -52,6 +44,7 @@ def train_epoch(model, optimizer, loss_fn):
         optimizer.step()
         losses += loss.item()
         #nput("Continue...")
+    return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn):
     model.eval()
@@ -77,9 +70,9 @@ def evaluate(model, loss_fn):
     return losses / len(list(val_dataloader))
 
 
-def training_setup():
-    transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, EMB_SIZE,
-                                    NHEAD, TGT_VOCAB_SIZE, FFN_HID_DIM)
+def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr):
+    transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
+
     for p in transformer.parameters():
         if p.dim() > 1:
             nn.init.xavier_uniform_(p)
@@ -89,31 +82,19 @@ def training_setup():
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
     #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
-    optimizer = optim.Adafactor(transformer.parameters(), lr=1e-3)
+    optimizer = optim.Adafactor(transformer.parameters(), lr=lr)
 
-    for epoch in range(1, NUM_EPOCHS+1):
+    for epoch in range(1, n_epoch+1):
         start_time = timer()
         train_loss = train_epoch(transformer, optimizer, loss_fn)
         end_time = timer()
         val_loss = evaluate(transformer, loss_fn)
         print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
     
-    torch.save(transformer.state_dict(), MODEL_DIR + '/model2.pt')
     return transformer
 
-
-if __name__ == '__main__':
-
-    #transformer = training_setup()
-    # save model LOAD
-    transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, 
-                                     NUM_DECODER_LAYERS, EMB_SIZE,
-                                     NHEAD, TGT_VOCAB_SIZE, FFN_HID_DIM)
-    transformer.load_state_dict(torch.load(MODEL_DIR + '/model1.pt'))
-    transformer.to(DEVICE).eval()
-
-    test_audio_file = './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav'
-    y, sr = librosa.load(test_audio_file, sr=SAMPLE_RATE)
+def transcribe_midi(model, audio_file): 
+    y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
     y = split_audio(y,SEG_LENGTH)
     # convert to melspectrograms
     M =  librosa.feature.melspectrogram(y=y, sr=sr, 
@@ -129,9 +110,83 @@ if __name__ == '__main__':
     # logscale magnitudes
     M_db = librosa.power_to_db(M_transposed, ref=np.max)
 
-    print(M_db.shape)
-    print("READY TO TRANSLATE")
-    new_M_db = M_db[:,[0],:]
-    print(new_M_db.shape)
+    # translate one chunk at a time    
+    seq_chunks = [[] for _ in range(M_db.shape[1])] 
+    for i in range(M_db.shape[1]):   
+        cur_translation = model.translate(torch.tensor(M_db[:,[0],:]))
+        seq_chunks[i] += (cur_translation.int().tolist())
+
+    # convert sequence chunks to a pretty_midi object
+    pretty_obj = seq_chunks_to_pretty_midi(seq_chunks)
+
     
-    transformer.translate(torch.tensor(new_M_db))
+
+    print("CONVERT TO MIDI")
+    if not os.path.exists(results_dir + 'translation.mid'):
+        pretty_obj.write(results_dir + 'translation.mid')
+
+    input("Continue to fs...")
+    output_path = results_dir + 'translation.wav'
+    midi_path = results_dir + 'translation.mid'
+    cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+    ret_status = os.system(cmd)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Arguments for training')
+    parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
+    parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
+                        default='INFO', help='specify level of detail for log file')
+
+    # qrsh -l gpus=1 -l gpu_c=6
+    # cd /projectnb/textconv/sadiela/midi_generation/scripts
+    # CONTINUED TRAINING
+
+    args = vars(parser.parse_args())
+    modelsubdir = args['modeldir']
+    ### create directory for models and results ###
+    modeldir = MODEL_DIR + modelsubdir
+    if not os.path.isdir(modeldir):
+        #print("DIRECTORY DOES NOT EXIST:", modeldir)
+        sys.exit(1)
+
+    ### save hyperparameters to YAML file in folder ###
+    param_file = modeldir + "/MODEL_PARAMS.yaml"
+    results_file = modeldir + "/results.yaml"
+
+    # Read params from this file!
+    # Make sure there is a parameter file! Need one to continue
+    try: 
+        with open(str(param_file)) as file: 
+            model_hyperparams = yaml.load(file, Loader=yaml.FullLoader)
+    except Exception as e: 
+        print(e)
+        sys.exit(1)
+
+    model_hyperparams['modeldir']=modelsubdir
+    n_enc = int(model_hyperparams['num_enc'])
+    n_dec = int(model_hyperparams['num_dec'])
+    nhead = int(model_hyperparams['num_heads'])
+    num_epochs = int(model_hyperparams['num_epochs'])
+    soundfont = model_hyperparams['soundfont']
+    batch_size = int(model_hyperparams['batch_size'])
+    ffn_hidden = int(model_hyperparams['ffn_hidden'])
+    emb_dim = int(model_hyperparams['emb_dim'])
+    vocab_size = int(model_hyperparams['vocab_size'])
+    learning_rate = float(model_hyperparams['learningrate'])
+    midi_dir = int(model_hyperparams['midi_dir'])
+    audio_dir = int(model_hyperparams['audio_dir'])
+
+    # save param file again
+
+    transformer = train(n_enc, n_dec, emb_dim, nhead, vocab_size, 
+                        ffn_hidden, num_epochs, learning_rate)
+    
+    # SAVE MODEL
+    torch.save(transformer.state_dict(), MODEL_DIR + '/model2.pt')
+
+
+    #transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
+    #transformer.load_state_dict(torch.load(MODEL_DIR + '/model1.pt'))
+    #transformer.to(DEVICE).eval()

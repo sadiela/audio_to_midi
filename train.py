@@ -13,6 +13,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn, batch_size):
+    print("TRAINING BATCH SIZE:", batch_size)
     model.train()
     losses = 0
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
@@ -29,7 +30,6 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
         src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
         logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
-        #print("outputs post softmax:", logits.shape)
 
         optimizer.zero_grad()
 
@@ -70,7 +70,7 @@ def evaluate(model, loss_fn, batch_size):
     return losses / len(list(val_dataloader))
 
 
-def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr):
+def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr, batch_size):
     transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
 
     for p in transformer.parameters():
@@ -86,7 +86,7 @@ def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr):
 
     for epoch in range(1, n_epoch+1):
         start_time = timer()
-        train_loss = train_epoch(transformer, optimizer, loss_fn)
+        train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size)
         end_time = timer()
         val_loss = evaluate(transformer, loss_fn, batch_size)
         print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
@@ -149,21 +149,21 @@ if __name__ == '__main__':
     emb_dim = int(model_hyperparams['emb_dim'])
     vocab_size = int(model_hyperparams['vocab_size'])
     learning_rate = float(model_hyperparams['learningrate'])
-    midi_dir = int(model_hyperparams['midi_dir'])
-    audio_dir = int(model_hyperparams['audio_dir'])
+    midi_dir = model_hyperparams['midi_dir']
+    audio_dir = model_hyperparams['audio_dir']
 
     # save param file again
 
     transformer = train(n_enc, n_dec, emb_dim, nhead, vocab_size, 
-                        ffn_hidden, num_epochs, learning_rate)
+                        ffn_hidden, num_epochs, learning_rate, batch_size)
     
     # SAVE MODEL
     torch.save(transformer.state_dict(), MODEL_DIR + '/model.pt')
 
-    print("TRANSCRIBING MIDI")
+    '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
     print("PLOTTING MIDI")
-    img = custom_plot_pianoroll(midi_data)
+    img = custom_plot_pianoroll(midi_data)'''
 
 
     #transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)

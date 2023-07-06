@@ -9,6 +9,8 @@ from spectrograms import *
 from midi_vocabulary import *
 import random
 
+MAX_BATCH=128
+
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):
         """
@@ -46,7 +48,7 @@ class AudioMidiDataset(Dataset):
         return len(self.audio_paths)
 
 # FIX COLLATE
-def collate_fn(data, collate_shuffle=True, batch_size=128): # I think this should still work
+def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should still work
   # data is a list of 2d tensors; concatenate and shuffle all list items
   data = list(filter(lambda x: x is not None, data))
   specs = [item[0] for item in data]
@@ -55,17 +57,23 @@ def collate_fn(data, collate_shuffle=True, batch_size=128): # I think this shoul
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
 
-  print("FULL SPEC SHAPE:", full_spec_list.shape)
-  print("FULL MIDI SHAPE:", full_midi_list.shape)
+  # shuffle and take max of 128
+
+  if collate_shuffle == True:
+      rand_idx = torch.randperm(full_spec_list.shape[1])
+      full_spec_list=full_spec_list[:,rand_idx,:]
+      full_midi_list=full_midi_list[:,rand_idx]
+
+  #print("FULL SPEC SHAPE:", full_spec_list.shape)
+  #print("FULL MIDI SHAPE:", full_midi_list.shape)
+  #print("BATCH SIZE:", batch_size)
+
+  if full_spec_list.shape[1] > MAX_BATCH:
+      #print("TRIMMING BATCH")
+      full_midi_list = full_midi_list[:, :MAX_BATCH]
+      full_spec_list = full_spec_list[:, :MAX_BATCH, :]
 
   return full_spec_list, full_midi_list
-
-  '''if collate_shuffle:
-    idx = torch.randperm(full_list.shape[0])
-    return  full_list[idx].view(full_list.size())[:,batch_size]
-  else:
-    return full_list[:,batch_size]'''
-  
 
 if __name__ == '__main__':
     midi_dir = './small_matched_data/midi/'

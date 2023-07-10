@@ -12,10 +12,10 @@ def get_free_filename(stub, directory, suffix='', date=True):
         else: 
             file_candidate = '{}/{}-{}{}'.format(str(directory), stub, counter, suffix)
         if Path(file_candidate).exists():
-            print("file exists")
+            #print("file exists")
             counter += 1
         else:  # No match found
-            print("no file")
+            print("Counter:", counter)
             if suffix=='.p':
                 print("will create pickle file")
             elif suffix:

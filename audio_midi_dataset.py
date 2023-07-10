@@ -7,9 +7,8 @@ import pretty_midi
 import numpy as np
 from spectrograms import *
 from midi_vocabulary import *
-import random
 
-MAX_BATCH=128
+MAX_BATCH=4
 
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):

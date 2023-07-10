@@ -21,7 +21,7 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
-    logging.info("BEGINNING TRAINING LOOP")
+    #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
     for src, tgt in train_dataloader:
         src = src.to(DEVICE).to(torch.float32)
         tgt = tgt.to(DEVICE).to(torch.float32)
@@ -91,7 +91,7 @@ def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr, bat
         end_time = timer()
         val_loss = evaluate(transformer, loss_fn, batch_size)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
-        print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
+        #print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
     
     return transformer
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     '''LOGGING STUFF'''
     loglevel=  args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
-    logfile = get_free_filename('vae_training_log', modeldir, suffix='.log', date=False)
+    logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=numeric_level)
 
     # qrsh -l gpus=1 -l gpu_c=6
@@ -168,8 +168,8 @@ if __name__ == '__main__':
                         ffn_hidden, num_epochs, learning_rate, batch_size)
     
     # SAVE MODEL
-    logging.info("Saving model to file:")
     save_model_path = get_free_filename('model', modeldir, suffix='.pt', date=True)
+    logging.info("Saving model to file: %s", save_model_path)
     torch.save(transformer.state_dict(), MODEL_DIR + '/model.pt')
 
     '''print("TRANSCRIBING MIDI")

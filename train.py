@@ -1,10 +1,12 @@
 import torch 
 from simple_transformer import *
 from audio_midi_dataset import *
+from utility import *
 from timeit import default_timer as timer
 import torch_optimizer as optim
 import argparse
 import yaml
+import logging
 
 
 torch.manual_seed(0)
@@ -13,13 +15,13 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn, batch_size):
-    print("TRAINING BATCH SIZE:", batch_size)
+    logging.info("TRAINING BATCH SIZE: %d", batch_size)
     model.train()
     losses = 0
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
-    print("BEGINNING TRAINING LOOP")
+    logging.info("BEGINNING TRAINING LOOP")
     for src, tgt in train_dataloader:
         src = src.to(DEVICE).to(torch.float32)
         tgt = tgt.to(DEVICE).to(torch.float32)
@@ -38,7 +40,6 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
         #print(logits.shape, tgt_out.shape)
         # 631 logits
         loss = loss_fn(logits, tgt_out)
-        print("LOSS:", loss)
         loss.backward()
 
         optimizer.step()
@@ -89,6 +90,7 @@ def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr, bat
         train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size)
         end_time = timer()
         val_loss = evaluate(transformer, loss_fn, batch_size)
+        logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
         print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
     
     return transformer
@@ -99,7 +101,7 @@ def transcribe_midi(model, audio_file):
     # translate one chunk at a time    
     seq_chunks = [[] for _ in range(M_db.shape[1])] 
     for i in range(M_db.shape[1]):   
-        cur_translation = model.translate(torch.tensor(M_db[:,[0],:]))
+        cur_translation = model.translate(torch.tensor(M_db[:,[i],:]))
         seq_chunks[i] += (cur_translation.int().tolist())
 
     # convert sequence chunks to a pretty_midi object
@@ -108,27 +110,32 @@ def transcribe_midi(model, audio_file):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description='Arguments for training')
     parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
     parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
                         default='INFO', help='specify level of detail for log file')
-
-    # qrsh -l gpus=1 -l gpu_c=6
-    # cd /projectnb/textconv/sadiela/midi_generation/scripts
-    # CONTINUED TRAINING
-
     args = vars(parser.parse_args())
+
     modelsubdir = args['modeldir']
     ### create directory for models and results ###
     modeldir = MODEL_DIR + modelsubdir
     if not os.path.isdir(modeldir):
         #print("DIRECTORY DOES NOT EXIST:", modeldir)
         sys.exit(1)
-
-    ### save hyperparameters to YAML file in folder ###
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     results_file = modeldir + "/results.yaml"
+    
+    '''LOGGING STUFF'''
+    loglevel=  args['loglevel']
+    numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
+    logfile = get_free_filename('vae_training_log', modeldir, suffix='.log', date=False)
+    logging.basicConfig(filename=logfile, level=numeric_level)
+
+    # qrsh -l gpus=1 -l gpu_c=6
+    # cd /projectnb/textconv/sadiela/midi_generation/scripts
+    # CONTINUED TRAINING
+
+    ### save hyperparameters to YAML file in folder ###
 
     # Make sure there is a parameter file! Need one to continue
     try: 
@@ -151,13 +158,18 @@ if __name__ == '__main__':
     learning_rate = float(model_hyperparams['learningrate'])
     midi_dir = model_hyperparams['midi_dir']
     audio_dir = model_hyperparams['audio_dir']
+    val_midi_dir = model_hyperparams['midi_dir']
+    val_audio_dir = model_hyperparams['audio_dir']
 
     # save param file again
 
+    logging.info("Training transformer model")
     transformer = train(n_enc, n_dec, emb_dim, nhead, vocab_size, 
                         ffn_hidden, num_epochs, learning_rate, batch_size)
     
     # SAVE MODEL
+    logging.info("Saving model to file:")
+    save_model_path = get_free_filename('model', modeldir, suffix='.pt', date=True)
     torch.save(transformer.state_dict(), MODEL_DIR + '/model.pt')
 
     '''print("TRANSCRIBING MIDI")

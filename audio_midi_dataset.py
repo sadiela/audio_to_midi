@@ -57,8 +57,6 @@ def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should 
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
 
-  # shuffle and take max of 128
-
   if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]

@@ -58,7 +58,7 @@ def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should 
 
   if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
-      print("DATA SIZE", full_spec_list.shape, full_midi_list.shape)
+      print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
       full_midi_list=full_midi_list[:,rand_idx]
 

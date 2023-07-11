@@ -44,8 +44,8 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
 
         optimizer.step()
         losses += loss.item()
-        if i%100 ==0:
-            logging.log("ITERATION: %d, LOSS: %f", i, loss.item())
+        if i%1000 ==0:
+            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
         #nput("Continue...")
     return losses / len(list(train_dataloader))
 

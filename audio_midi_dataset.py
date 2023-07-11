@@ -33,7 +33,7 @@ class AudioMidiDataset(Dataset):
         M_db_clean = np.delete(M_db, empty_section_idxs, axis=1)
         midi_seqs_clean = np.delete(midi_seqs, empty_section_idxs, axis=1)
 
-        if midi_seqs_clean.shape[1] == 0:
+        if midi_seqs_clean.shape[1] == 0 or midi_seqs_clean.shape[1] != M_db_clean.shape[1]:
             return None
         
         #chosen_chunk_idx = random.randint(0, midi_seqs_clean.shape[1]-1) # for now...
@@ -58,6 +58,7 @@ def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should 
 
   if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
+      print("DATA SIZES", full_spec_list.shape, full_midi_list.shape)
       full_spec_list=full_spec_list[:,rand_idx,:]
       full_midi_list=full_midi_list[:,rand_idx]
 

@@ -20,12 +20,12 @@ def create_mask(src, tgt):
     src_seq_len = src.shape[0]
     tgt_seq_len = tgt.shape[0]
 
-    tgt_mask = generate_square_subsequent_mask(tgt_seq_len)
+    tgt_mask = generate_square_subsequent_mask(tgt_seq_len).to(DEVICE)
     src_mask = torch.zeros((src_seq_len, src_seq_len),device=DEVICE).type(torch.bool)
 
     #src_padding_mask = (src == PAD_IDX).transpose(0, 1)
-    src_padding_mask = torch.zeros(src.shape[1], src.shape[0]).to(bool) # think this should work now. All 0s because no padding
-    tgt_padding_mask = (tgt == PAD_IDX).transpose(0, 1)
+    src_padding_mask = torch.zeros(src.shape[1], src.shape[0]).to(bool).to(DEVICE) # think this should work now. All 0s because no padding
+    tgt_padding_mask = (tgt == PAD_IDX).transpose(0, 1).to(DEVICE)
     return src_mask, tgt_mask, src_padding_mask, tgt_padding_mask
 
 # helper Module that adds positional encoding to the token embedding to introduce a notion of word order.
@@ -91,10 +91,10 @@ class Seq2SeqTransformer(nn.Module):
         # TGT_MASK SHAPE: TGT_MAX_BATCH_SEQ_LEN x TGT_MAX_BATCH_SEQ_LEN
         # SRC_PADDING_MASK SHAPE: BATCH_SIZE x SRC_MAX_BATCH_SEQ_LEN
         # TGT_PADDING_MASK SHAPE: BATCH_SIZE x TGT_MAX_BATCH_SEQ_LEN
-        src_emb = self.feedforward_src_emb(src) # we just need it the right shape...? # add activation? 
+        src_emb = self.feedforward_src_emb(src).to(DEVICE) # we just need it the right shape...? # add activation? 
         #print("SRC POST DENSE LAYER:", src.shape)
-        src_emb = self.positional_encoding(src_emb) # won't need this step
-        tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
+        src_emb = self.positional_encoding(src_emb).to(DEVICE) # won't need this step
+        tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg)).to(DEVICE)
         # SRC SHAPE: SRC_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
         # TRG SHAPE: TGT_MAX_BATCH_SEQ_LEN x BATCH_SIZE x EMBED_DIM
         #outs = self.transformer(src_emb, tgt_emb, src_mask, tgt_mask, None,

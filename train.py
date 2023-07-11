@@ -16,7 +16,7 @@ MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn, batch_size):
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
-    model.train()
+    model.train().to(DEVICE)
     losses = 0
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
@@ -164,6 +164,7 @@ if __name__ == '__main__':
     # save param file again
 
     logging.info("Training transformer model")
+    print("DEVICE:", DEVICE)
     transformer = train(n_enc, n_dec, emb_dim, nhead, vocab_size, 
                         ffn_hidden, num_epochs, learning_rate, batch_size)
     

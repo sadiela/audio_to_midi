@@ -22,9 +22,9 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
     #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
-    for src, tgt in train_dataloader:
-        src = src.to(DEVICE).to(torch.float32)
-        tgt = tgt.to(DEVICE).to(torch.float32)
+    for i, data in enumerate(train_dataloader):
+        src = data[0].to(DEVICE).to(torch.float32)
+        tgt = data[1].to(DEVICE).to(torch.float32)
 
         tgt_input = tgt[:-1, :]
 
@@ -44,6 +44,8 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
 
         optimizer.step()
         losses += loss.item()
+        if i%100 ==0:
+            logging.log("ITERATION: %d, LOSS: %f", i, loss.item())
         #nput("Continue...")
     return losses / len(list(train_dataloader))
 

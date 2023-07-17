@@ -76,29 +76,45 @@ def evaluate(model, loss_fn, batch_size):
 
     return losses / len(list(val_dataloader))
 
-
-def train(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, n_epoch, lr, batch_size):
+def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs):
     transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
+    #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
+    optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
 
-    for p in transformer.parameters():
-        if p.dim() > 1:
-            nn.init.xavier_uniform_(p)
+    # check for previously trained models: 
+    previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
+
+    if len(previous_models) == 0:
+        for p in transformer.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+    else: 
+        most_recent_model = get_newest_file(previous_models)
+        stat_dictionary = torch.load(modeldir + '/' + most_recent_model, map_location=torch.device(DEVICE))
+        model_params = stat_dictionary["model_state_dict"]
+        transformer.load_state_dict(model_params)
+        optimizer.load_state_dict(stat_dictionary['optimizer_state_dict']) # load optimizer back as well!
 
     transformer = transformer.to(DEVICE)
 
+    return transformer, optimizer, num_epochs - len(previous_models)
+
+def train(transformer, optimizer, n_epoch, batch_size, modeldir):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
-
-    #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
-    optimizer = optim.Adafactor(transformer.parameters(), lr=lr)
-
     for epoch in range(1, n_epoch+1):
         start_time = timer()
         train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size)
         end_time = timer()
+        # SAVE INTERMEDIATE MODEL
+        cur_model_file = get_free_filename('model-'+str(e), modeldir, suffix='.pt')
+        torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': transformer.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    }, cur_model_file) # incremental saves
+        logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
         val_loss = evaluate(transformer, loss_fn, batch_size)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
-        #print((f"Epoch: {epoch}, Train loss: {train_loss}, Val loss: {val_loss}, "f"Epoch time = {(end_time - start_time)}s"))
-    
     return transformer
 
 def transcribe_midi(model, audio_file): 
@@ -113,7 +129,6 @@ def transcribe_midi(model, audio_file):
     # convert sequence chunks to a pretty_midi object
     pretty_obj = seq_chunks_to_pretty_midi(seq_chunks)
     return pretty_obj
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for training')
@@ -132,7 +147,7 @@ if __name__ == '__main__':
     results_file = modeldir + "/results.yaml"
     
     '''LOGGING STUFF'''
-    loglevel=  args['loglevel']
+    loglevel= args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=numeric_level)
@@ -142,7 +157,6 @@ if __name__ == '__main__':
     # CONTINUED TRAINING
 
     ### save hyperparameters to YAML file in folder ###
-
     # Make sure there is a parameter file! Need one to continue
     try: 
         with open(str(param_file)) as file: 
@@ -168,22 +182,17 @@ if __name__ == '__main__':
     val_audio_dir = model_hyperparams['audio_dir']
 
     # save param file again
+    transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, 
+                        ffn_hidden, num_epochs, learning_rate, batch_size, num_epochs)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer = train(n_enc, n_dec, emb_dim, nhead, vocab_size, 
-                        ffn_hidden, num_epochs, learning_rate, batch_size)
+    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir)
     
-    # SAVE MODEL
-    save_model_path = get_free_filename('model', modeldir, suffix='.pt', date=True)
-    logging.info("Saving model to file: %s", save_model_path)
-    torch.save(transformer.state_dict(), MODEL_DIR + '/model.pt')
-
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
     print("PLOTTING MIDI")
     img = custom_plot_pianoroll(midi_data)'''
-
 
     #transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
     #transformer.load_state_dict(torch.load(MODEL_DIR + '/model1.pt'))

@@ -21,6 +21,7 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
     training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
+    start_time = timer()
     #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
     for i, data in enumerate(train_dataloader):
         src = data[0].to(DEVICE).to(torch.float32)
@@ -46,6 +47,9 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
         losses += loss.item()
         if i%1000 ==0:
             logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+            end_time = timer()
+            logging.info("Time: %f", (end_time-start_time))
+            start_time = timer()
         #nput("Continue...")
     return losses / len(list(train_dataloader))
 

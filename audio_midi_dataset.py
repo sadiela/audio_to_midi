@@ -8,7 +8,7 @@ import numpy as np
 from spectrograms import *
 from midi_vocabulary import *
 
-MAX_BATCH=4
+MAX_BATCH=256
 
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):
@@ -17,19 +17,22 @@ class AudioMidiDataset(Dataset):
             audio_file_dir (string): Path to the wav file directory
             midi_file_dir: Path to midi file directory
         """
-        with open('./densefiles.p', 'rb') as fp:
+        '''with open('./densefiles.p', 'rb') as fp:
             dense_files = pickle.load(fp)
-        self.dense_files = dense_files
+        self.dense_files = dense_files'''
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir
         #self.midi_file_list = [self.midi_dir + fpath for fpath in self.dense_files] #os.listdir(self.audio_dir) # WILL END IN .wav!!!
-        #self.audio_paths = [ Path(audio_file_dir) / f for f in self.audio_file_list if f[-3:] == 'wav' ]
+        self.audio_file_list = os.listdir(self.audio_dir) # WILL END IN .wav!!!
+        self.audio_paths = [ Path(audio_file_dir) / f for f in self.audio_file_list if f[-3:] == 'wav' ]
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_files[index][:-3] + 'wav')
-        # LOAD MIDI
-        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_files[index])
+        M_db = calc_mel_spec(audio_file = self.audio_dir + self.audio_file_list[index])
+        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
+        #M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_files[index][:-3] + 'wav')
+        #midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_files[index])
+        
         midi_seqs = pretty_midi_to_seq_chunks(midi)
 
         empty_section_idxs = np.where(midi_seqs[1,:] == 0)[0]
@@ -50,7 +53,7 @@ class AudioMidiDataset(Dataset):
         return len(self.audio_paths)
 
 # FIX COLLATE
-def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should still work
+def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should still work
   # data is a list of 2d tensors; concatenate and shuffle all list items
   data = list(filter(lambda x: x is not None, data))
   specs = [item[0] for item in data]
@@ -61,7 +64,7 @@ def collate_fn(data, batch_size=2, collate_shuffle=True): # I think this should 
 
   if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
-      print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
+      #print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
       full_midi_list=full_midi_list[:,rand_idx]
 

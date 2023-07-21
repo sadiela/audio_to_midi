@@ -97,13 +97,14 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
 
     transformer = transformer.to(DEVICE)
 
-    return transformer, optimizer, num_epochs - len(previous_models)
+    return transformer, optimizer, (num_epochs - len(previous_models))
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     for epoch in range(1, n_epoch+1):
         start_time = timer()
         train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size)
+        logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         # SAVE INTERMEDIATE MODEL
         cur_model_file = get_free_filename('model-'+str(e), modeldir, suffix='.pt')
@@ -182,8 +183,7 @@ if __name__ == '__main__':
     val_audio_dir = model_hyperparams['audio_dir']
 
     # save param file again
-    transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, 
-                        ffn_hidden, num_epochs, learning_rate, batch_size, num_epochs)
+    transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)

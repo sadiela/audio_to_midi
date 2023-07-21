@@ -24,33 +24,36 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
     start_time = timer()
     #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
     for i, data in enumerate(train_dataloader):
-        src = data[0].to(DEVICE).to(torch.float32)
-        tgt = data[1].to(DEVICE).to(torch.float32)
+        try:
+            src = data[0].to(DEVICE).to(torch.float32)
+            tgt = data[1].to(DEVICE).to(torch.float32)
 
-        tgt_input = tgt[:-1, :]
+            tgt_input = tgt[:-1, :]
 
-        #print("INPUT SIZE FOR CREATE_MASK FUNC:", src.shape, tgt.shape)
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+            #print("INPUT SIZE FOR CREATE_MASK FUNC:", src.shape, tgt.shape)
+            src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
-        logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
+            logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        logits = logits.reshape(-1, logits.shape[-1])
-        tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
-        #print(logits.shape, tgt_out.shape)
-        # 631 logits
-        loss = loss_fn(logits, tgt_out)
-        loss.backward()
+            logits = logits.reshape(-1, logits.shape[-1])
+            tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
+            #print(logits.shape, tgt_out.shape)
+            # 631 logits
+            loss = loss_fn(logits, tgt_out)
+            loss.backward()
 
-        optimizer.step()
-        losses += loss.item()
-        if i%10 ==0:
-            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-            end_time = timer()
-            logging.info("Time: %f", (end_time-start_time))
-            start_time = timer()
-        #nput("Continue...")
+            optimizer.step()
+            losses += loss.item()
+            if i%10 ==0:
+                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+                end_time = timer()
+                logging.info("Time: %f", (end_time-start_time))
+                start_time = timer()
+            #nput("Continue...")
+        except Exception as e:
+            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, batch_size):
@@ -61,18 +64,21 @@ def evaluate(model, loss_fn, batch_size):
     val_dataloader = DataLoader(val_iter, batch_size=batch_size, collate_fn=collate_fn)
 
     for src, tgt in val_dataloader:
-        src = src.to(DEVICE).to(torch.float32)
-        tgt = tgt.to(DEVICE).to(torch.long)
+        try: 
+            src = src.to(DEVICE).to(torch.float32)
+            tgt = tgt.to(DEVICE).to(torch.long)
 
-        tgt_input = tgt[:-1, :]
+            tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+            src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
-        logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
+            logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
 
-        tgt_out = tgt[1:, :]
-        loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
-        losses += loss.item()
+            tgt_out = tgt[1:, :]
+            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+            losses += loss.item()
+        except Exception as e:
+            logging.info("ERROR: %s", str(e))
 
     return losses / len(list(val_dataloader))
 
@@ -105,6 +111,7 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
         buffer_size += buffer.nelement() * buffer.element_size()
     size_all_mb = (param_size + buffer_size) / 1024**2
     print('model size: {:.3f}MB'.format(size_all_mb))
+    logging.info('model size: {:.3f}MB'.format(size_all_mb))
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 

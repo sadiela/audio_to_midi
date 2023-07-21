@@ -14,7 +14,7 @@ torch.manual_seed(0)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
-def train_epoch(model, optimizer, loss_fn, batch_size):
+def train_epoch(model, optimizer, loss_fn, batch_size, audio_dir, midi_dir):
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
     model.train().to(DEVICE)
     losses = 0
@@ -115,11 +115,11 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 
-def train(transformer, optimizer, n_epoch, batch_size, modeldir):
+def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, val_audio, val_midi):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     for epoch in range(1, n_epoch+1):
         start_time = timer()
-        train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size)
+        train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size, audio_dir, midi_dir)
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         # SAVE INTERMEDIATE MODEL
@@ -130,7 +130,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir):
                     'optimizer_state_dict': optimizer.state_dict(),
                     }, cur_model_file) # incremental saves
         logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
-        val_loss = evaluate(transformer, loss_fn, batch_size)
+        val_loss = evaluate(transformer, loss_fn, batch_size, val_audio, val_midi)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
     return transformer
 
@@ -203,8 +203,7 @@ if __name__ == '__main__':
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir)
-    
+    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir,audio_dir, midi_dir, val_audio_dir, val_midi_dir)
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
     print("PLOTTING MIDI")

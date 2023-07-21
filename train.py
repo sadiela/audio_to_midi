@@ -45,7 +45,7 @@ def train_epoch(model, optimizer, loss_fn, batch_size):
 
         optimizer.step()
         losses += loss.item()
-        if i%1000 ==0:
+        if i%10 ==0:
             logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
             end_time = timer()
             logging.info("Time: %f", (end_time-start_time))

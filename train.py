@@ -56,7 +56,7 @@ def train_epoch(model, optimizer, loss_fn, batch_size, audio_dir, midi_dir):
             logging.info("ERROR IN TRAINING LOOP: %s", str(e))
     return losses / len(list(train_dataloader))
 
-def evaluate(model, loss_fn, batch_size):
+def evaluate(model, loss_fn, batch_size, audio_dir, midi_dir):
     model.eval()
     losses = 0
 

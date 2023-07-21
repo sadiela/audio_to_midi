@@ -101,8 +101,6 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
         transformer.load_state_dict(model_params)
         optimizer.load_state_dict(stat_dictionary['optimizer_state_dict']) # load optimizer back as well!
 
-    transformer = transformer.to(DEVICE)
-
     param_size = 0
     for param in transformer.parameters():
         param_size += param.nelement() * param.element_size()
@@ -112,6 +110,9 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     size_all_mb = (param_size + buffer_size) / 1024**2
     print('model size: {:.3f}MB'.format(size_all_mb))
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
+
+
+    transformer = transformer.to(DEVICE)
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 

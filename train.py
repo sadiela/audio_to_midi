@@ -97,6 +97,15 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
 
     transformer = transformer.to(DEVICE)
 
+    param_size = 0
+    for param in transformer.parameters():
+        param_size += param.nelement() * param.element_size()
+    buffer_size = 0
+    for buffer in transformer.buffers():
+        buffer_size += buffer.nelement() * buffer.element_size()
+    size_all_mb = (param_size + buffer_size) / 1024**2
+    print('model size: {:.3f}MB'.format(size_all_mb))
+
     return transformer, optimizer, (num_epochs - len(previous_models))
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir):
@@ -107,7 +116,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir):
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         # SAVE INTERMEDIATE MODEL
-        cur_model_file = get_free_filename('model-'+str(e), modeldir, suffix='.pt')
+        cur_model_file = get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
         torch.save({
                     'epoch': epoch,
                     'model_state_dict': transformer.state_dict(),

@@ -8,7 +8,7 @@ import numpy as np
 from spectrograms import *
 from midi_vocabulary import *
 
-MAX_BATCH=256
+MAX_BATCH=16
 
 class AudioMidiDataset(Dataset):
     def __init__(self, audio_file_dir, midi_file_dir):
@@ -76,6 +76,8 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
       #print("TRIMMING BATCH")
       full_midi_list = full_midi_list[:, :MAX_BATCH]
       full_spec_list = full_spec_list[:, :MAX_BATCH, :]
+
+  print("FINAL DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1]) 
 
   return full_spec_list, full_midi_list
 

@@ -31,7 +31,7 @@ class PositionalEncoding(nn.Module): # probably need to change this!
 class TokenEmbedding(nn.Module):
     def __init__(self, vocab_size: int, emb_size):
         super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, emb_size,padding_idx=PAD_IDX)
+        self.embedding = nn.Embedding(vocab_size, emb_size, padding_idx=PAD_IDX)
         self.emb_size = emb_size
 
     def forward(self, tokens):
@@ -61,7 +61,7 @@ class EncoderLayer(nn.Module):
         
     def forward(self, x): #, mask):
         attn_output = self.self_attn(x, x, x) #, mask) # for the forward encoder layer, we do not need a mask
-                                                    # The model is allowed to see the full input and there is no padding in the spectrograms       
+                                               # The model is allowed to see the full input and there is no padding in the spectrograms       
         x = self.norm1(x + self.dropout(attn_output))
         ff_output = self.feed_forward(x)
         x = self.norm2(x + self.dropout(ff_output))
@@ -78,18 +78,18 @@ class DecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
         
-    def forward(self, x, enc_output, src_padding_mask, tgt_padding_mask, self_lookahead_mask, cross_lookahead_mask):
+    def forward(self, x, enc_output, tgt_padding_mask, self_lookahead_mask):
         attn_output = self.self_attn(x, x, x, key_padding_mask=tgt_padding_mask, attn=self_lookahead_mask)
         x = self.norm1(x + self.dropout(attn_output))
-        attn_output = self.cross_attn(x, enc_output, enc_output, key_padding_mask=src_padding_mask, attn=cross_lookahead_mask)
+        attn_output = self.cross_attn(x, enc_output, enc_output) #WOULD BE SOURCE PADDING BUT DONT NEED, key_padding_mask=src_padding_mask, attn=cross_lookahead_mask)
         x = self.norm2(x + self.dropout(attn_output))
         ff_output = self.feed_forward(x)
         x = self.norm3(x + self.dropout(ff_output))
         return x
     
-class Transformer(nn.Module):
+class TranscriptionTransformer(nn.Module):
     def __init__(self, src_vocab_size, tgt_vocab_size, emb_size, num_heads, num_layers, d_ff, max_seq_length, dropout=0.0):
-        super(Transformer, self).__init__()
+        super(TranscriptionTransformer, self).__init__()
 
         self.feedforward_src_emb = nn.Linear(emb_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
@@ -108,13 +108,12 @@ class Transformer(nn.Module):
 
     def forward(self, src, tgt):
         print("SRC AND TGT SHAPES:", src.shape, tgt.shape)
-        S = src.shape[0]
+        #S = src.shape[0]
         T = tgt.shape[0] # seq length is first
 
-        src_padding_mask = torch.ones(S,S)
+        #src_padding_mask = torch.ones(S,S)
         tgt_padding_mask = (tgt == PAD_IDX).to(DEVICE) # no padding mask needed for input
         self_lookahead_mask = lookahead_mask(T,T)
-        cross_lookahead_mask = lookahead_mask(T,S)
 
         # embedd the data
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
@@ -128,7 +127,7 @@ class Transformer(nn.Module):
         # decoder layers
         dec_output = tgt_embedded
         for dec_layer in self.decoder_layers:
-            dec_output = dec_layer(dec_output, enc_output, src_padding_mask, tgt_padding_mask, self_lookahead_mask, cross_lookahead_mask)
+            dec_output = dec_layer(dec_output, enc_output, tgt_padding_mask, self_lookahead_mask)
 
         output = self.fc(dec_output)
         return output
@@ -139,6 +138,49 @@ class Transformer(nn.Module):
         enc_output = src_emb
         for enc_layer in self.encoder_layers:
             enc_output = enc_layer(enc_output) #, src_mask)
+    
+    def decode(self, tgt, enc_output, tgt_padding_mask, self_lookahead_mask):
+        tgt_embedded = self.positional_encoding(self.tgt_tok_emb(tgt))
+        
+        dec_output = tgt_embedded
+        for dec_layer in self.decoder_layers:
+            dec_output = dec_layer(dec_output, enc_output, tgt_padding_mask, self_lookahead_mask)
+        
+        output = self.fc(dec_output)
+        return output
+    
+    def greedy_decode(self, src, src_mask, max_len, start_symbol):
+        src = src.to(DEVICE).to(torch.float32)
+        src_mask = src_mask.to(DEVICE)
+        memory = self.encode(src, src_mask)
+        ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
+        #print("ys:", ys.shape, ys)
+        for i in range(max_len-1):
+            memory = memory.to(DEVICE)
+            tgt_padding_mask = (ys == PAD_IDX).to(DEVICE)
+            self_lookahead_mask = (lookahead_mask(ys.size(0),ys.size(0)))#.type(torch.bool)).to(DEVICE)
+            #print(ys.shape, memory.shape, tgt_mask.shape)
+            out = self.decode(ys, memory, tgt_padding_mask, self_lookahead_mask) #k.shape[0], bsz * num_heads, head_dim
+            out = out.transpose(0, 1)
+            prob = self.generator(out[:, -1])
+            _, next_word = torch.max(prob, dim=1)
+            next_word = next_word.item()
+
+            ys = torch.cat([ys,
+                            torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
+            if next_word == EOS_IDX:
+                break
+        return ys
+    
+    def translate(self, src):
+        self.eval()
+        num_tokens = src.shape[0]
+        src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
+        tgt_tokens = self.greedy_decode(
+            src, src_mask, max_len=1024, start_symbol=BOS_IDX).flatten()
+        print("TGT shape:",tgt_tokens.shape)
+        input("Continueee...")
+        return tgt_tokens
 
 def lookahead_mask(sz1, sz2): # sz1 always T, sz2 S or T
     look_ahead_mask = torch.triu(torch.ones(sz1, sz2), diagonal=1)

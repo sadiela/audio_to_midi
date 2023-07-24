@@ -1,5 +1,5 @@
 import torch 
-from simple_transformer import *
+#from simple_transformer import *
 from transcription_transformer import *
 from audio_midi_dataset import *
 from utility import *
@@ -25,36 +25,33 @@ def train_epoch(model, optimizer, loss_fn, batch_size, audio_dir, midi_dir):
     start_time = timer()
     #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
     for i, data in enumerate(train_dataloader):
-        try:
-            src = data[0].to(DEVICE).to(torch.float32)
-            tgt = data[1].to(DEVICE).to(torch.float32)
+        #try:
+        src = data[0].to(DEVICE).to(torch.float32)
+        tgt = data[1].to(DEVICE).to(torch.float32)
+        print("SRC AND TGT SHAPES:", src.shape, tgt.shape)
+        tgt_input = tgt[:-1, :]
 
-            tgt_input = tgt[:-1, :]
+        logits = model(src, tgt_input)
 
-            #print("INPUT SIZE FOR CREATE_MASK FUNC:", src.shape, tgt.shape)
-            src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+        optimizer.zero_grad()
 
-            logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
+        logits = logits.reshape(-1, logits.shape[-1])
+        tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
+        #print(logits.shape, tgt_out.shape)
+        # 631 logits
+        loss = loss_fn(logits, tgt_out)
+        loss.backward()
 
-            optimizer.zero_grad()
-
-            logits = logits.reshape(-1, logits.shape[-1])
-            tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
-            #print(logits.shape, tgt_out.shape)
-            # 631 logits
-            loss = loss_fn(logits, tgt_out)
-            loss.backward()
-
-            optimizer.step()
-            losses += loss.item()
-            if i%10 ==0:
-                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-                end_time = timer()
-                logging.info("Time: %f", (end_time-start_time))
-                start_time = timer()
+        optimizer.step()
+        losses += loss.item()
+        if i%10 ==0:
+            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+            end_time = timer()
+            logging.info("Time: %f", (end_time-start_time))
+            start_time = timer()
             #nput("Continue...")
-        except Exception as e:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+        #except Exception as e:
+        #    logging.info("ERROR IN TRAINING LOOP: %s", str(e))
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, batch_size, audio_dir, midi_dir):

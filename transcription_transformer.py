@@ -1,9 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import sys
 import math
-#from midi_vocabulary import *
-#from audio_midi_dataset import *
 import random
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EOS_IDX = 0
@@ -39,21 +38,20 @@ class TokenEmbedding(nn.Module):
 
 class FeedForwardWithGEGLU(nn.Module):
     def __init__(self, embed_dim, hidden_dim):
-        super(FeedForwardWithGEGLU).__init__()
+        super(FeedForwardWithGEGLU, self).__init__()
         self.W = nn.Linear(embed_dim, hidden_dim) 
         self.V = nn.Linear(embed_dim, hidden_dim) 
         self.W2= nn.Linear(hidden_dim, embed_dim)
-        self.gelu = F.gelu()
 
     def forward(self, x):
-        geglu = torch.mul(self.gelu(self.W(x)),self.V(x))
+        geglu = torch.mul(F.gelu(self.W(x)),self.V(x))
         out = self.W2(geglu)
         return out
 
 class EncoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, d_ff, dropout=0.0):
         super(EncoderLayer, self).__init__()
-        self.self_attn = nn.MultiHeadAttention(d_model, num_heads)
+        self.self_attn = nn.MultiheadAttention(d_model, num_heads)
         self.feed_forward = FeedForwardWithGEGLU(d_model, d_ff)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
@@ -62,7 +60,7 @@ class EncoderLayer(nn.Module):
     def forward(self, x): #, mask):
         attn_output = self.self_attn(x, x, x) #, mask) # for the forward encoder layer, we do not need a mask
                                                # The model is allowed to see the full input and there is no padding in the spectrograms       
-        x = self.norm1(x + self.dropout(attn_output))
+        x = self.norm1(x + self.dropout(attn_output[0]))
         ff_output = self.feed_forward(x)
         x = self.norm2(x + self.dropout(ff_output))
         return x
@@ -70,8 +68,8 @@ class EncoderLayer(nn.Module):
 class DecoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, d_ff, dropout=0.0):
         super(DecoderLayer, self).__init__()
-        self.self_attn = nn.MultiHeadAttention(d_model, num_heads)
-        self.cross_attn = nn.MultiHeadAttention(d_model, num_heads)
+        self.self_attn = nn.MultiheadAttention(d_model, num_heads)
+        self.cross_attn = nn.MultiheadAttention(d_model, num_heads)
         self.feed_forward = FeedForwardWithGEGLU(d_model, d_ff)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
@@ -79,31 +77,28 @@ class DecoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x, enc_output, tgt_padding_mask, self_lookahead_mask):
-        attn_output = self.self_attn(x, x, x, key_padding_mask=tgt_padding_mask, attn=self_lookahead_mask)
-        x = self.norm1(x + self.dropout(attn_output))
+        attn_output = self.self_attn(x, x, x, key_padding_mask=tgt_padding_mask, attn_mask=self_lookahead_mask)
+        x = self.norm1(x + self.dropout(attn_output[0]))
         attn_output = self.cross_attn(x, enc_output, enc_output) #WOULD BE SOURCE PADDING BUT DONT NEED, key_padding_mask=src_padding_mask, attn=cross_lookahead_mask)
-        x = self.norm2(x + self.dropout(attn_output))
+        x = self.norm2(x + self.dropout(attn_output[0]))
         ff_output = self.feed_forward(x)
         x = self.norm3(x + self.dropout(ff_output))
         return x
     
 class TranscriptionTransformer(nn.Module):
-    def __init__(self, src_vocab_size, tgt_vocab_size, emb_size, num_heads, num_layers, d_ff, max_seq_length, dropout=0.0):
+    def __init__(self, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, dropout=0.0):
         super(TranscriptionTransformer, self).__init__()
 
-        self.feedforward_src_emb = nn.Linear(emb_size, emb_size)
-        self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
+        self.feedforward_src_emb = nn.Linear(emb_dim, emb_dim)
+        self.tgt_emb = TokenEmbedding(vocab_size, emb_dim)
 
-        #self.encoder_embedding = nn.Embedding(src_vocab_size, emb_size)
-        #self.decoder_embedding = nn.Embedding(tgt_vocab_size, emb_size)
-
-        self.positional_encoding = PositionalEncoding(emb_size, max_seq_length)
+        self.positional_encoding = PositionalEncoding(emb_dim)
 
         # actual transformer layers
-        self.encoder_layers = nn.ModuleList([EncoderLayer(emb_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
-        self.decoder_layers = nn.ModuleList([DecoderLayer(emb_size, num_heads, d_ff, dropout) for _ in range(num_layers)])
+        self.encoder_layers = nn.ModuleList([EncoderLayer(emb_dim, nhead, ffn_hidden, dropout) for _ in range(n_enc)])
+        self.decoder_layers = nn.ModuleList([DecoderLayer(emb_dim, nhead, ffn_hidden, dropout) for _ in range(n_dec)])
 
-        self.fc = nn.Linear(emb_size, tgt_vocab_size) # generator
+        self.fc = nn.Linear(emb_dim, vocab_size) # generator
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, src, tgt):
@@ -112,13 +107,14 @@ class TranscriptionTransformer(nn.Module):
         T = tgt.shape[0] # seq length is first
 
         #src_padding_mask = torch.ones(S,S)
-        tgt_padding_mask = (tgt == PAD_IDX).to(DEVICE) # no padding mask needed for input
+        tgt_padding_mask = (tgt == PAD_IDX).transpose(0,1).to(DEVICE) # no padding mask needed for input
         self_lookahead_mask = lookahead_mask(T,T)
 
         # embedd the data
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
-        tgt_embedded = self.dropout(self.positional_encoding(self.tgt_tok_emb(tgt)))
+        tgt_embedded = self.dropout(self.positional_encoding(self.tgt_emb(tgt)))
 
+        print("SHAPES POST EMBEDDING:", src_embedded.shape, tgt_embedded.shape)
         # encoder layers
         enc_output = src_embedded
         for enc_layer in self.encoder_layers:
@@ -130,6 +126,8 @@ class TranscriptionTransformer(nn.Module):
             dec_output = dec_layer(dec_output, enc_output, tgt_padding_mask, self_lookahead_mask)
 
         output = self.fc(dec_output)
+        print("Output shape:", output.shape)
+        input("Continue...")
         return output
     
     def encode(self, src):
@@ -140,7 +138,7 @@ class TranscriptionTransformer(nn.Module):
             enc_output = enc_layer(enc_output) #, src_mask)
     
     def decode(self, tgt, enc_output, tgt_padding_mask, self_lookahead_mask):
-        tgt_embedded = self.positional_encoding(self.tgt_tok_emb(tgt))
+        tgt_embedded = self.positional_encoding(self.tgt_emb(tgt))
         
         dec_output = tgt_embedded
         for dec_layer in self.decoder_layers:

@@ -1,5 +1,6 @@
 import torch 
 from simple_transformer import *
+from transcription_transformer import *
 from audio_midi_dataset import *
 from utility import *
 from timeit import default_timer as timer
@@ -83,7 +84,7 @@ def evaluate(model, loss_fn, batch_size, audio_dir, midi_dir):
     return losses / len(list(val_dataloader))
 
 def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs):
-    transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
+    transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
     #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
     optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
 

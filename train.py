@@ -100,14 +100,14 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 
-def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, val_paths):
+def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
     training_data = AudioMidiDataset(train_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
     
-    eval_data = AudioMidiDataset(val_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
+    eval_data = AudioMidiDataset(eval_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     eval_dataloader = DataLoader(eval_data, batch_size=batch_size, collate_fn=collate_fn)
 
     for epoch in range(1, n_epoch+1):
@@ -190,22 +190,22 @@ if __name__ == '__main__':
     midi_dir = model_hyperparams['midi_dir']
     audio_dir = model_hyperparams['audio_dir']
     train_midi_pickle = model_hyperparams['train_paths']
-    val_midi_pickle = model_hyperparams['val_paths']
+    eval_midi_pickle = model_hyperparams['eval_paths']
 
     with open(train_midi_pickle, 'rb') as fp:
         train_midi_paths = pickle.load(fp)
-    with open(val_midi_pickle, 'rb') as fp:
-        val_midi_paths = pickle.load(fp)
+    with open(eval_midi_pickle, 'rb') as fp:
+        eval_midi_paths = pickle.load(fp)
     
     #train_midi_paths = os.listdir(midi_dir)
-    #val_midi_paths = os.listdir(midi_dir)
+    #eval_midi_paths = os.listdir(midi_dir)
 
     # save param file again
     transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, val_paths=val_midi_paths)
+    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, eval_paths=eval_midi_paths)
     
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')

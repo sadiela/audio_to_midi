@@ -11,27 +11,23 @@ from midi_vocabulary import *
 MAX_BATCH=16
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, audio_file_dir, midi_file_dir):
+    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/'):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
             midi_file_dir: Path to midi file directory
         """
-        '''with open('./densefiles.p', 'rb') as fp:
-            dense_files = pickle.load(fp)
-        self.dense_files = dense_files'''
+        #with open(midi_pickle, 'rb') as fp:
+        #    dense_midis = pickle.load(fp)
+        self.dense_midis = dense_midis
+
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir
-        #self.midi_file_list = [self.midi_dir + fpath for fpath in self.dense_files] #os.listdir(self.audio_dir) # WILL END IN .wav!!!
-        self.audio_file_list = os.listdir(self.audio_dir) # WILL END IN .wav!!!
-        self.audio_paths = [ Path(audio_file_dir) / f for f in self.audio_file_list if f[-3:] == 'wav' ]
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        M_db = calc_mel_spec(audio_file = self.audio_dir + self.audio_file_list[index])
-        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.audio_file_list[index][:-3] + 'mid')
-        #M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_files[index][:-3] + 'wav')
-        #midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_files[index])
+        M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_midis[index][:-3] + 'wav')
+        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
         
         midi_seqs = pretty_midi_to_seq_chunks(midi)
 
@@ -41,16 +37,14 @@ class AudioMidiDataset(Dataset):
 
         if midi_seqs_clean.shape[1] == 0 or midi_seqs_clean.shape[1] != M_db_clean.shape[1]:
             return None
-        
-        #chosen_chunk_idx = random.randint(0, midi_seqs_clean.shape[1]-1) # for now...
-  
+          
         return torch.tensor(M_db_clean), torch.tensor(midi_seqs_clean) #torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
 
     def __getname__(self, index):
-        return self.paths[index]
+        return self.dense_midis[index]
 
     def __len__(self):
-        return len(self.audio_paths)
+        return len(self.dense_midis)
 
 # FIX COLLATE
 def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should still work
@@ -58,7 +52,7 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
   data = list(filter(lambda x: x is not None, data))
   specs = [item[0] for item in data]
   midis = [item[1] for item in data]
-  #print(len(data))
+
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
 
@@ -67,10 +61,6 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
       print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
       full_midi_list=full_midi_list[:,rand_idx]
-
-  #print("FULL SPEC SHAPE:", full_spec_list.shape)
-  #print("FULL MIDI SHAPE:", full_midi_list.shape)
-  #print("BATCH SIZE:", batch_size)
 
   if full_spec_list.shape[1] > MAX_BATCH:
       #print("TRIMMING BATCH")
@@ -84,9 +74,10 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
 if __name__ == '__main__':
     midi_dir = './small_matched_data/midi/'
     audio_dir = './small_matched_data/raw_audio/'
+    midi_list = os.listdir(midi_dir)
 
-    dataset = AudioMidiDataset(audio_dir, midi_dir)
+    dataset = AudioMidiDataset(midi_list, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     print(dataset.__len__()) # only 25 files rn 
-    dataloader = DataLoader(dataset, batch_size=2, collate_fn=collate_fn,shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn,shuffle=True)
     for x,y in dataloader:
       print(x.shape,"Targets",y.shape,"\n")

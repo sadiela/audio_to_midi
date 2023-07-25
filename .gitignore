@@ -3,7 +3,7 @@ lmd_tracks/
 raw_audio/
 .DS_Store
 __pycache__
-models/
 small_matched_data
 ec2
 results
+*.pt

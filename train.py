@@ -9,36 +9,29 @@ import argparse
 import yaml
 import logging
 
-
 torch.manual_seed(0)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
-def train_epoch(model, optimizer, loss_fn, batch_size, audio_dir, midi_dir):
-    logging.info("TRAINING BATCH SIZE: %d", batch_size)
+def train_epoch(model, optimizer, loss_fn, train_dataloader):
     model.train().to(DEVICE)
     losses = 0
-    training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
-    train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
 
     start_time = timer()
-    #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
     for i, data in enumerate(train_dataloader):
         #try:
-        src = data[0].to(DEVICE).to(torch.float32)
-        tgt = data[1].to(DEVICE).to(torch.float32)
-        print("SRC AND TGT SHAPES:", src.shape, tgt.shape)
-        tgt_input = tgt[:-1, :]
+        src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
+        tgt = data[1].to(DEVICE).to(torch.float32) # 1024 x 16 (seq_len x batch_size)
+        tgt_input = tgt[:-1, :] # why???
 
         logits = model(src, tgt_input)
-
         optimizer.zero_grad()
 
         logits = logits.reshape(-1, logits.shape[-1])
+        print(logits.shape)
         tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
-        #print(logits.shape, tgt_out.shape)
-        # 631 logits
+
         loss = loss_fn(logits, tgt_out)
         loss.backward()
 
@@ -49,28 +42,22 @@ def train_epoch(model, optimizer, loss_fn, batch_size, audio_dir, midi_dir):
             end_time = timer()
             logging.info("Time: %f", (end_time-start_time))
             start_time = timer()
-            #nput("Continue...")
         #except Exception as e:
         #    logging.info("ERROR IN TRAINING LOOP: %s", str(e))
     return losses / len(list(train_dataloader))
 
-def evaluate(model, loss_fn, batch_size, audio_dir, midi_dir):
+def evaluate(model, loss_fn, eval_dataloader):
     model.eval()
     losses = 0
 
-    val_iter = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
-    val_dataloader = DataLoader(val_iter, batch_size=batch_size, collate_fn=collate_fn)
-
-    for src, tgt in val_dataloader:
+    for src, tgt in eval_dataloader:
         try: 
             src = src.to(DEVICE).to(torch.float32)
             tgt = tgt.to(DEVICE).to(torch.long)
 
             tgt_input = tgt[:-1, :]
 
-            src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
-
-            logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
+            logits = model(src, tgt_input)
 
             tgt_out = tgt[1:, :]
             loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
@@ -78,7 +65,7 @@ def evaluate(model, loss_fn, batch_size, audio_dir, midi_dir):
         except Exception as e:
             logging.info("ERROR: %s", str(e))
 
-    return losses / len(list(val_dataloader))
+    return losses / len(list(eval_dataloader))
 
 def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs):
     transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
@@ -109,16 +96,23 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     print('model size: {:.3f}MB'.format(size_all_mb))
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
 
-
     transformer = transformer.to(DEVICE)
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 
-def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, val_audio, val_midi):
+def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, val_paths):
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+    
+    logging.info("TRAINING BATCH SIZE: %d", batch_size)
+    training_data = AudioMidiDataset(train_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
+    train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
+    
+    eval_data = AudioMidiDataset(val_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
+    eval_dataloader = DataLoader(eval_data, batch_size=batch_size, collate_fn=collate_fn)
+
     for epoch in range(1, n_epoch+1):
         start_time = timer()
-        train_loss = train_epoch(transformer, optimizer, loss_fn, batch_size, audio_dir, midi_dir)
+        train_loss = train_epoch(transformer, optimizer, loss_fn, train_dataloader)
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         # SAVE INTERMEDIATE MODEL
@@ -129,7 +123,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
                     'optimizer_state_dict': optimizer.state_dict(),
                     }, cur_model_file) # incremental saves
         logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
-        val_loss = evaluate(transformer, loss_fn, batch_size, val_audio, val_midi)
+        val_loss = evaluate(transformer, loss_fn, eval_dataloader)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
     return transformer
 
@@ -192,17 +186,27 @@ if __name__ == '__main__':
     emb_dim = int(model_hyperparams['emb_dim'])
     vocab_size = int(model_hyperparams['vocab_size'])
     learning_rate = float(model_hyperparams['learningrate'])
+    
     midi_dir = model_hyperparams['midi_dir']
     audio_dir = model_hyperparams['audio_dir']
-    val_midi_dir = model_hyperparams['midi_dir']
-    val_audio_dir = model_hyperparams['audio_dir']
+    '''train_midi_pickle = model_hyperparams['train_paths']
+    val_midi_pickle = model_hyperparams['val_paths']
+
+    with open(train_midi_pickle, 'rb') as fp:
+        train_midi_paths = pickle.load(fp)
+    with open(val_midi_pickle, 'rb') as fp:
+        val_midi_paths = pickle.load(fp)'''
+    
+    train_midi_paths = os.listdir(midi_dir)
+    val_midi_paths = os.listdir(midi_dir)
 
     # save param file again
     transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir,audio_dir, midi_dir, val_audio_dir, val_midi_dir)
+    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, val_paths=val_midi_paths)
+    
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
     print("PLOTTING MIDI")

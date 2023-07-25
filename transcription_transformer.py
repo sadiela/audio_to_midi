@@ -102,7 +102,6 @@ class TranscriptionTransformer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, src, tgt):
-        print("SRC AND TGT SHAPES:", src.shape, tgt.shape)
         #S = src.shape[0]
         T = tgt.shape[0] # seq length is first
 
@@ -114,7 +113,6 @@ class TranscriptionTransformer(nn.Module):
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
         tgt_embedded = self.dropout(self.positional_encoding(self.tgt_emb(tgt)))
 
-        print("SHAPES POST EMBEDDING:", src_embedded.shape, tgt_embedded.shape)
         # encoder layers
         enc_output = src_embedded
         for enc_layer in self.encoder_layers:
@@ -126,8 +124,6 @@ class TranscriptionTransformer(nn.Module):
             dec_output = dec_layer(dec_output, enc_output, tgt_padding_mask, self_lookahead_mask)
 
         output = self.fc(dec_output)
-        print("Output shape:", output.shape)
-        input("Continue...")
         return output
     
     def encode(self, src):

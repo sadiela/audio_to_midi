@@ -10,3 +10,5 @@ learningrate: .001
 num_epochs: 1
 midi_dir: './lmd_tracks'
 audio_dir:  '/raw_audio'
+train_paths: './trainfiles_sm.p'
+eval_paths: './testfiles_sm.p'

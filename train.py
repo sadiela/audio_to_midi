@@ -189,16 +189,16 @@ if __name__ == '__main__':
     
     midi_dir = model_hyperparams['midi_dir']
     audio_dir = model_hyperparams['audio_dir']
-    '''train_midi_pickle = model_hyperparams['train_paths']
+    train_midi_pickle = model_hyperparams['train_paths']
     val_midi_pickle = model_hyperparams['val_paths']
 
     with open(train_midi_pickle, 'rb') as fp:
         train_midi_paths = pickle.load(fp)
     with open(val_midi_pickle, 'rb') as fp:
-        val_midi_paths = pickle.load(fp)'''
+        val_midi_paths = pickle.load(fp)
     
-    train_midi_paths = os.listdir(midi_dir)
-    val_midi_paths = os.listdir(midi_dir)
+    #train_midi_paths = os.listdir(midi_dir)
+    #val_midi_paths = os.listdir(midi_dir)
 
     # save param file again
     transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)

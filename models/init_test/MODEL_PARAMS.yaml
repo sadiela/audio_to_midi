@@ -1,0 +1,12 @@
+num_enc: 2 # 8
+num_dec: 2 # 8
+num_heads: 2 # 4
+soundfont: "./GeneralUser_GS_v1.471.sf2"
+batch_size: 2 # 128 HOW MANY SONGS TO LOAD
+ffn_hidden: 512 # 1024
+emb_dim: 512
+vocab_size: 631
+learningrate: .001
+num_epochs: 1
+midi_dir: './small_matched_data/midi/'
+audio_dir:  './small_matched_data/raw_audio/'

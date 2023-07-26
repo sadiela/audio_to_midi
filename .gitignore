@@ -7,3 +7,4 @@ small_matched_data
 ec2
 results
 *.pt
+*.p

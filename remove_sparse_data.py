@@ -6,6 +6,7 @@ from pathlib import Path
 import pickle
 import matplotlib.pyplot as plt
 import random
+import sys
 
 def find_sparse_midis(midi_directory, extension, dense_tracks, sparsity_dict, sparsity_cutoff=0.25):
     num_sparse = 0
@@ -40,6 +41,10 @@ def create_datasets(dense_filepath):
     with open('./trainfiles.p', 'wb') as fp:
         pickle.dump(train_files, fp, pickle.HIGHEST_PROTOCOL)
 
+    print("LENGTH OF TEST AND TRAIN LISTS:", len(test_files), len(train_files))
+
+    input("Continue...")
+
     random.shuffle(test_files)
     random.shuffle(train_files)
 
@@ -53,10 +58,14 @@ def create_datasets(dense_filepath):
         pickle.dump(train_files[:1000], fp)
     
     with open('./trainfiles_med.p', 'wb') as fp:
-        pickle.dump(train_files[10000], fp)
+        pickle.dump(train_files[:10000], fp)
     
 if __name__ == '__main__':
     print("FIND SPARSE MIDIS!")
+
+    create_datasets('./densefiles.p')
+    sys.exit()
+
     extension = folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f']
     dense_tracks = []
     sparsity_dict = {}

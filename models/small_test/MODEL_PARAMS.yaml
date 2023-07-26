@@ -7,7 +7,7 @@ ffn_hidden: 1024 # 1024
 emb_dim: 512
 vocab_size: 631
 learningrate: .001
-num_epochs: 1
+num_epochs: 3
 midi_dir: './lmd_tracks'
 audio_dir:  '/raw_audio'
 train_paths: './trainfiles_sm.p'

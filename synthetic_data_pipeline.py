@@ -17,7 +17,7 @@ def write_list(a_list, fname):
         pickle.dump(a_list, fp)
         print('Done writing list into a binary file')
 
-# Read list to memory
+# Read list
 def read_list(fname):
     # for reading also binary mode is important
     with open(fname, 'rb') as fp:
@@ -124,8 +124,27 @@ if __name__ == '__main__':
     print("Converting tracks to raw audio")
     midi_stub = './lmd_full/'
     track_stub = './lmd_tracks/'
-    raw_audio_stub = './raw_audio/'
+    raw_audio_stub = '/raw_audio/'
+
     folder_extensions = ['2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
+
+    # create directories
+    for f in folder_extensions:
+        os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
+
+    # load 
+    small_trainfiles = read_list('./data_lists/trainfiles_sm.p')
+
+    for t in small_trainfiles:
+        midi_path = track_stub + t 
+        output_path = raw_audio_stub + t[:-3] + '.wav'
+        print(midi_path, output_path)
+        input("Continue...")
+        if not os.path.isfile(output_path):
+            cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+            ret_status = os.system(cmd)
+
+    sys.exit(0)
 
     e = '0'
     cur_track_folder = track_stub + e 

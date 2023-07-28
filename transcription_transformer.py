@@ -105,7 +105,6 @@ class TranscriptionTransformer(nn.Module):
         #S = src.shape[0]
         T = tgt.shape[0] # seq length is first
 
-        #src_padding_mask = torch.ones(S,S)
         tgt_padding_mask = (tgt == PAD_IDX).transpose(0,1).to(DEVICE) # no padding mask needed for input
         self_lookahead_mask = lookahead_mask(T,T)
 

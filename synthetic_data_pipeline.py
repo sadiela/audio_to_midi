@@ -133,13 +133,11 @@ if __name__ == '__main__':
         os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
 
     # load 
-    small_trainfiles = read_list('./data_lists/trainfiles_sm.p')
+    small_testfiles = read_list('./data_lists/testfiles_sm.p')
 
-    for t in small_trainfiles:
+    for t in small_testfiles:
         midi_path = track_stub + t 
         output_path = raw_audio_stub + t[:-3] + 'wav'
-        print(midi_path, output_path)
-        input("Continue...")
         if not os.path.isfile(output_path):
             cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
             ret_status = os.system(cmd)

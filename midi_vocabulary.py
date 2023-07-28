@@ -145,11 +145,10 @@ def midi_to_wav(midi_path,wav_path):
 
 if __name__ == '__main__':
 
-    print(pretty_midi.program_to_instrument_name(1))
-    sys.exit(0)
     midi_directory = './small_matched_data/midi/'
     mid_files = os.listdir(midi_directory)
     target_dir = './small_matched_data/midi_reconverted/'
+    seq_dir = './small_matched_data/sequences/'
 
     # start with just note onset and time events!
 
@@ -160,6 +159,7 @@ if __name__ == '__main__':
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
         seq_chunks = pretty_midi_to_seq_chunks(open_midi)
         print("ARRAY SHAPE:", type(seq_chunks), seq_chunks.shape, seq_chunks[:,0], seq_chunks[0,:])
+        np.save(seq_chunks, )
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
         input("Continue...")

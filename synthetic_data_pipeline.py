@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     for t in small_trainfiles:
         midi_path = track_stub + t 
-        output_path = raw_audio_stub + t[:-3] + '.wav'
+        output_path = raw_audio_stub + t[:-3] + 'wav'
         print(midi_path, output_path)
         input("Continue...")
         if not os.path.isfile(output_path):

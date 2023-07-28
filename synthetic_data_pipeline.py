@@ -126,7 +126,7 @@ if __name__ == '__main__':
     track_stub = './lmd_tracks/'
     raw_audio_stub = '/raw_audio/'
 
-    folder_extensions = ['2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
+    folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
 
     # create directories
     for f in folder_extensions:

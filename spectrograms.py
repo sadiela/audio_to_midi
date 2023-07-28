@@ -63,17 +63,18 @@ def calc_mel_spec(audio_file=None, y=None, sr=None):
 
 if __name__ == '__main__':
     raw_audio_folder = './small_matched_data/raw_audio/'
+    spectrogram_folder = './small_matched_data/spectrograms/'
     file_list = os.listdir(raw_audio_folder)
     for f in file_list: 
         if f[-3:] == 'wav':
-            print(f)
             y, sr = librosa.load(raw_audio_folder+f, sr=SAMPLE_RATE)
             print(len(y), sr)
-            print("LENGTH:", int(len(y)/sr)//60, ':', int(len(y)/sr)%60)
-            plot_whole_wav(y,sr)
-            input("...")
-            plot_wav_chunk(y,sr)
-            input("...")
+            mel_spec = calc_mel_spec(raw_audio_folder + f)
+
+            np.save(spectrogram_folder + f[:-4], mel_spec)
+
+    # TIME COMPARISON: 
+    melspec_conversion 
     # after sanity check, these lengths look good. 
     # Now we can see how it translates for the spectrograms
 

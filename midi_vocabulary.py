@@ -3,6 +3,8 @@ import pretty_midi
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+from timeit import default_timer as timer
+
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
@@ -125,13 +127,11 @@ def pretty_midi_to_seq_chunks(open_midi):
     for seq in event_sequences:
         seq.append(0) # APPEND EOS TOKENS
         #print(len(seq))
-    # NOW PAD THEM ALL TO THE LENGTH OF THE LONGEST ONE!
-    #longest_seq = max([len(seq) for seq in event_sequences])
-    #print("LONGEST:", longest_seq)
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
+    array_seqs = array_seqs.astype('ushort')
     return array_seqs
 
 def midi_to_wav(midi_path,wav_path):
@@ -149,17 +149,27 @@ if __name__ == '__main__':
     mid_files = os.listdir(midi_directory)
     target_dir = './small_matched_data/midi_reconverted/'
     seq_dir = './small_matched_data/sequences/'
+    seq_files = os.listdir(seq_dir)
 
     # start with just note onset and time events!
 
     # Test by converting back to MIDI
+    start_time = timer()
     for file in mid_files:
-        print(file)
-        print(midi_directory + file)
+        #print(file)
+        #print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
         seq_chunks = pretty_midi_to_seq_chunks(open_midi)
-        print("ARRAY SHAPE:", type(seq_chunks), seq_chunks.shape, seq_chunks[:,0], seq_chunks[0,:])
-        np.save(seq_chunks, )
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
-        input("Continue...")
+        #input("Continue...")
+    end_time = timer()
+
+    print("CONVERT ON THE FLY RUNTIME:",end_time-start_time)
+
+    start_time2 = timer()
+    for file in seq_files:
+        seq = np.load(seq_dir + file)
+    end_time2 = timer()
+
+    print("LOAD SEQ RUNTIME:",end_time2-start_time2)

@@ -26,8 +26,6 @@ class AudioMidiDataset(Dataset):
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        print(self.dense_midis[index])
-        input("Continue...")
         M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_midis[index][:-3] + 'wav')
         midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
         

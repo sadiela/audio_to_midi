@@ -29,7 +29,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
         optimizer.zero_grad()
 
         logits = logits.reshape(-1, logits.shape[-1])
-        print(logits.shape)
+        #print(logits.shape)
         tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
 
         loss = loss_fn(logits, tgt_out)

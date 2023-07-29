@@ -3,6 +3,7 @@ import numpy as np
 import librosa 
 import os
 import matplotlib.pyplot as plt
+from timeit import default_timer as timer
 
 ''' Spectrogram stuff '''
 SEG_LENGTH = 65407
@@ -65,16 +66,29 @@ if __name__ == '__main__':
     raw_audio_folder = './small_matched_data/raw_audio/'
     spectrogram_folder = './small_matched_data/spectrograms/'
     file_list = os.listdir(raw_audio_folder)
-    for f in file_list: 
+    spec_list = os.listdir(spectrogram_folder)
+    '''for f in file_list: 
         if f[-3:] == 'wav':
             y, sr = librosa.load(raw_audio_folder+f, sr=SAMPLE_RATE)
             print(len(y), sr)
             mel_spec = calc_mel_spec(raw_audio_folder + f)
 
-            np.save(spectrogram_folder + f[:-4], mel_spec)
+            np.save(spectrogram_folder + f[:-4], mel_spec)'''
 
     # TIME COMPARISON: 
-    melspec_conversion 
+    start_time = timer()
+    for f in file_list: 
+        if f[-3:] == 'wav':
+            y, sr = librosa.load(raw_audio_folder+f, sr=SAMPLE_RATE)
+            mel_spec = calc_mel_spec(raw_audio_folder + f)
+    end_time = timer()
+    print("converting on the fly:", end_time-start_time) 
+
+    start2 = timer()
+    for s in spec_list:
+        seq = np.load(spectrogram_folder + s)
+    end2 = timer()
+    print("loading spec:", end2-start2)
     # after sanity check, these lengths look good. 
     # Now we can see how it translates for the spectrograms
 

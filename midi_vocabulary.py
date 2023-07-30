@@ -17,20 +17,10 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-<<<<<<< HEAD
     event_dictionary[i] = 'NOTE:' + str(i-3)
-=======
-<<<<<<< HEAD
-    event_dictionary[i] = 'NOTE:' + str(i-3)
-=======
-    event_dictionary[i] = 'NOTE_START:' + str(i-3)
->>>>>>> a3a2556a3a696e70fbd76f92943b04d632a2a122
->>>>>>> 9f3bb9614ff2df5ad7ffbf205a0b675d50bf8af4
-for i in range(131,259):
-    event_dictionary[i] = 'NOTE_END:', str(i-131)
 
-for i in range(259,760):
-    event_dictionary[i] = round(0.01*(i-258),2)
+for i in range(131,632):
+    event_dictionary[i] = round(0.01*(i-130),2)
 
 event_idxs = {v: k for k, v in event_dictionary.items()}
 

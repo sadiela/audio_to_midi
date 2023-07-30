@@ -22,7 +22,7 @@ for i in range(3,131):
 for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
 
-event_idxs = {v: k for k, v in event_dictionary.items()}
+#event_idxs = {v: k for k, v in event_dictionary.items()}
 
 #for i in range(259,760):
 #    event_dictionary[i] = round(0.01*(i-258),2)
@@ -117,7 +117,7 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
-    array_seqs = array_seqs.astype('ushort')
+    array_seqs = array_seqs.astype('int8')
     return array_seqs
 
 def pretty_midi_to_seq_chunks(open_midi): 
@@ -153,6 +153,7 @@ def pretty_midi_to_seq_chunks(open_midi):
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
+    array_seqs = array_seqs.astype('int8')
     return array_seqs
 
 def midi_to_wav(midi_path,wav_path):

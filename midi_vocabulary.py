@@ -153,7 +153,7 @@ def pretty_midi_to_seq_chunks(open_midi):
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
-    array_seqs = array_seqs.astype('int8')
+    #array_seqs = array_seqs.astype('int8')
     return array_seqs
 
 def midi_to_wav(midi_path,wav_path):

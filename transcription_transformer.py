@@ -110,6 +110,7 @@ class TranscriptionTransformer(nn.Module):
 
         # embedd the data
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
+        print("TGT:", tgt)
         tgt_embedded = self.dropout(self.positional_encoding(self.tgt_emb(tgt)))
 
         # encoder layers

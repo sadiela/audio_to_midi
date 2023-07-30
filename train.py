@@ -8,6 +8,7 @@ import torch_optimizer as optim
 import argparse
 import yaml
 import logging
+from tqdm import tqdm
 
 torch.manual_seed(0)
 
@@ -19,7 +20,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
     losses = 0
 
     start_time = timer()
-    for i, data in enumerate(train_dataloader):
+    for i, data in tqdm(enumerate(train_dataloader)):
         #try:
         src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
         tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
@@ -37,7 +38,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
         optimizer.step()
         losses += loss.item()
-        if i%10 ==0:
+        if i%100 ==0:
             logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
             end_time = timer()
             logging.info("Time: %f", (end_time-start_time))

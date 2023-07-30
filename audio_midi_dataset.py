@@ -47,7 +47,7 @@ class AudioMidiDataset(Dataset):
         return len(self.dense_midis)
 
 # FIX COLLATE
-def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should still work
+def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should still work
   # data is a list of 2d tensors; concatenate and shuffle all list items
   data = list(filter(lambda x: x is not None, data))
   specs = [item[0] for item in data]
@@ -58,7 +58,7 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
 
   if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
-      print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
+      #print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
       full_midi_list=full_midi_list[:,rand_idx]
 
@@ -67,7 +67,7 @@ def collate_fn(data, batch_size=4, collate_shuffle=True): # I think this should 
       full_midi_list = full_midi_list[:, :MAX_BATCH]
       full_spec_list = full_spec_list[:, :MAX_BATCH, :]
 
-  print("FINAL DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1]) 
+  #print("FINAL DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1]) 
 
   return full_spec_list, full_midi_list
 

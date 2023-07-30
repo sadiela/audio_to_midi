@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import sys
 import math
 import random
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device('cpu') #'cuda' if torch.cuda.is_available() else 'cpu')
 EOS_IDX = 0
 PAD_IDX = 1
 BOS_IDX = 2

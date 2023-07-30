@@ -17,7 +17,7 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-    event_dictionary[i] = 'NOTE_START:' + str(i-3)
+    event_dictionary[i] = 'NOTE:' + str(i-3)
 for i in range(131,259):
     event_dictionary[i] = 'NOTE_END:', str(i-131)
 
@@ -145,7 +145,6 @@ def pretty_midi_to_seq_chunks(open_midi):
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
-    array_seqs = array_seqs.astype('ushort')
     return array_seqs
 
 def midi_to_wav(midi_path,wav_path):

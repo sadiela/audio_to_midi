@@ -11,7 +11,7 @@ import logging
 
 torch.manual_seed(0)
 
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device('cpu') #'cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn, train_dataloader):

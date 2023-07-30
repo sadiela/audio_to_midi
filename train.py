@@ -22,7 +22,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
     for i, data in enumerate(train_dataloader):
         #try:
         src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-        tgt = data[1].to(DEVICE).to(torch.float32) # 1024 x 16 (seq_len x batch_size)
+        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
         tgt_input = tgt[:-1, :] # why???
 
         logits = model(src, tgt_input)
@@ -30,7 +30,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
         logits = logits.reshape(-1, logits.shape[-1])
         #print(logits.shape)
-        tgt_out = tgt[1:, :].reshape(-1).to(torch.long)
+        tgt_out = tgt[1:, :].reshape(-1)
 
         loss = loss_fn(logits, tgt_out)
         loss.backward()

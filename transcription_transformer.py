@@ -106,7 +106,7 @@ class TranscriptionTransformer(nn.Module):
         T = tgt.shape[0] # seq length is first
 
         tgt_padding_mask = (tgt == PAD_IDX).transpose(0,1).to(DEVICE) # no padding mask needed for input
-        self_lookahead_mask = lookahead_mask(T,T)
+        self_lookahead_mask = lookahead_mask(T,T).to(DEVICE)
 
         # embedd the data
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))

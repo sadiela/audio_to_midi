@@ -17,7 +17,11 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
+<<<<<<< HEAD
     event_dictionary[i] = 'NOTE:' + str(i-3)
+=======
+    event_dictionary[i] = 'NOTE_START:' + str(i-3)
+>>>>>>> a3a2556a3a696e70fbd76f92943b04d632a2a122
 for i in range(131,259):
     event_dictionary[i] = 'NOTE_END:', str(i-131)
 

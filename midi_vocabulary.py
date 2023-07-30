@@ -17,16 +17,15 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-<<<<<<< HEAD
     event_dictionary[i] = 'NOTE:' + str(i-3)
-=======
-    event_dictionary[i] = 'NOTE_START:' + str(i-3)
->>>>>>> a3a2556a3a696e70fbd76f92943b04d632a2a122
-for i in range(131,259):
-    event_dictionary[i] = 'NOTE_END:', str(i-131)
 
-for i in range(259,760):
-    event_dictionary[i] = round(0.01*(i-258),2)
+for i in range(131,632):
+    event_dictionary[i] = round(0.01*(i-130),2)
+
+event_idxs = {v: k for k, v in event_dictionary.items()}
+
+#for i in range(259,760):
+#    event_dictionary[i] = round(0.01*(i-258),2)
 
 event_idxs = {v: k for k, v in event_dictionary.items()}
 
@@ -103,7 +102,7 @@ def seq_chunks_to_pretty_midi(seq_chunks):
     #if not os.path.exists(target_dir + 'seq_conversion1.mid'):
     #    cur_midi.write(str(target_dir + 'seq_conversion1.mid'))
 
-def pretty_midi_to_seq_chunks_w_offsets(open_midi): 
+def pretty_midi_to_seq_chunks_w_noteoff(open_midi): 
     note_starts = [note.start for note in open_midi.instruments[0].notes]
     note_ends = [note.end for note in open_midi.instruments[0].notes]
     num_segs = int((note_ends[-1] // SEG_LENGTH_SECS)) + 1
@@ -136,6 +135,8 @@ def pretty_midi_to_seq_chunks(open_midi):
             # add a time event
             note_offset = note.start - cur_seg*SEG_LENGTH_SECS
             rounded_offset = round(note_offset, 2)
+            #print("OFFSET AND ROUNDED:", note_offset, rounded_offset)
+            #print("DICT EVENT:", event_idxs[rounded_offset])
             if rounded_offset != 0.0:
                 event_sequences[cur_seg].append(event_idxs[rounded_offset])
         event_sequences[cur_seg].append(event_idxs["NOTE:"+str(note.pitch)])
@@ -145,6 +146,9 @@ def pretty_midi_to_seq_chunks(open_midi):
     for seq in event_sequences:
         seq.append(0) # APPEND EOS TOKENS
         #print(len(seq))
+    # NOW PAD THEM ALL TO THE LENGTH OF THE LONGEST ONE!
+    #longest_seq = max([len(seq) for seq in event_sequences])
+    #print("LONGEST:", longest_seq)
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!

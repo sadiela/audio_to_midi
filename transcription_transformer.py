@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import sys
 import math
 import random
-DEVICE = torch.device('cpu') #'cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EOS_IDX = 0
 PAD_IDX = 1
 BOS_IDX = 2
@@ -110,7 +110,6 @@ class TranscriptionTransformer(nn.Module):
 
         # embedd the data
         src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
-        print("TGT:", tgt)
         tgt_embedded = self.dropout(self.positional_encoding(self.tgt_emb(tgt)))
 
         # encoder layers

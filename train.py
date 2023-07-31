@@ -124,7 +124,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         end_time = timer()
         train_losses.append(train_loss)
         # SAVE INTERMEDIATE MODEL
-        cur_model_file = get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
+        cur_model_file = modeldir + '/model-' + str(epoch) + '.pt' #get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
         torch.save({
                     'epoch': epoch,
                     'model_state_dict': transformer.state_dict(),

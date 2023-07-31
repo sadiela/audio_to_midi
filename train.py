@@ -133,7 +133,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
         eval_loss = evaluate(transformer, loss_fn, eval_dataloader)
         eval_losses.append(eval_loss)
-        logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
+        logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, eval_loss, (end_time-start_time))
     return transformer, train_losses, eval_losses
 
 def transcribe_midi(model, audio_file): 
@@ -146,7 +146,7 @@ def transcribe_midi(model, audio_file):
         seq_chunks[i] += (cur_translation.int().tolist())
 
     # convert sequence chunks to a pretty_midi object
-    pretty_obj = seq_chunks_to_pretty_midi(seq_chunks)
+    pretty_obj = seq_chunks_to_pretty_midi(seq_chunks) # NOT SURE THIS NEEDS TO BE TRANSPOSED OR NOT!!!
     return pretty_obj
 
 if __name__ == '__main__':

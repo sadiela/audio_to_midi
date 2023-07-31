@@ -5,13 +5,14 @@ import sys
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 from operator import itemgetter
+import pickle
+from tqdm import tqdm
 
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
 SOUNDFONT_PATH = "./GeneralUser_GS_v1.471.sf2"
 MAX_LENGTH=1024
-
 
 event_dictionary = {}
 event_dictionary[0] = '<EOS>'
@@ -24,7 +25,6 @@ for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
 
 #event_idxs = {v: k for k, v in event_dictionary.items()}
-
 #for i in range(259,760):
 #    event_dictionary[i] = round(0.01*(i-258),2)
 
@@ -85,15 +85,16 @@ def custom_plot_pianoroll(
 def seq_chunks_to_pretty_midi(seq_chunks):
     cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!
     cur_inst = pretty_midi.Instrument(program=1)
+    print(seq_chunks.shape)
+    seq_chunks = seq_chunks.T
     for i, chunk in enumerate(seq_chunks):
         base_time = SEG_LENGTH_SECS*i # whatever chunk we are at
         cur_time = base_time
         for event in chunk: 
-            if event in range(2, 130): # NOTE EVENT!
-                print(event_dictionary[i])
+            if event in range(3, 131): # NOTE EVENT!
                 note = pretty_midi.Note(velocity=100, pitch=event-3, start=cur_time, end=cur_time + 0.25)
                 cur_inst.notes.append(note)
-            elif event in range(130,631): # TIME SHIFT!
+            elif event in range(131,632): # TIME SHIFT!
                 cur_time = base_time + event_dictionary[event]
             elif event == 0:
                 break # end of this chunk
@@ -180,7 +181,6 @@ def pretty_midi_to_seq_chunks(open_midi):
             if rounded_offset != 0.0:
                 event_sequences[cur_seg].append(event_idxs[rounded_offset])
         event_sequences[cur_seg].append(event_idxs["NOTE:"+str(note.pitch)])
-        #input("Continue...")
         previous_note_time = note.start
     #print("SEQUENCE:", event_sequences, [event_dictionary[i] for i in event_sequences[cur_seg]])
     for seq in event_sequences:
@@ -193,7 +193,7 @@ def pretty_midi_to_seq_chunks(open_midi):
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
-    array_seqs = array_seqs.astype('int8')
+    array_seqs = array_seqs.astype('int16')
     return array_seqs
 
 def midi_to_wav(midi_path,wav_path):
@@ -214,10 +214,33 @@ def midis_to_wavs(midi_path, wav_path=None):
 
 if __name__ == '__main__':
 
+    print("Converting tracks to raw audio")
+    midi_stub = './lmd_tracks/'
+    seq_stub = './lmd_seqs/'
+
+    folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
+
+    # create directories
+    for f in folder_extensions:
+        os.makedirs(seq_stub + f, mode=0o777, exist_ok=True)
+
+    with open('./data_lists/densefiles.p', 'rb') as fp:
+        dense_midis = pickle.load(fp)
+
+    print("NUM MIDS:", len(dense_midis))
+
+    for mid in tqdm(dense_midis):
+        open_midi = pretty_midi.PrettyMIDI(midi_stub + mid)
+        seq_chunks = pretty_midi_to_seq_chunks(open_midi)
+        if not os.path.exists(seq_stub + mid[:-3] + 'npy'):
+            np.save(seq_stub + mid[:-3] + 'npy', seq_chunks)
+
+    sys.exit(0)
+
     midi_directory = './small_matched_data/midi/'
     mid_files = os.listdir(midi_directory)
     target_dir = './small_matched_data/midi_reconverted/'
-    noteoff_dir = './small_matched_data/midi_reconverted_noteoff/'
+    noteoff_dir = './small_matched_data/midi_reconverted/'
     seq_dir = './small_matched_data/sequences/'
     seq_files = os.listdir(seq_dir)
 
@@ -229,8 +252,8 @@ if __name__ == '__main__':
         print(file)
         #print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
-        seq_chunks = pretty_midi_to_seq_chunks_w_noteoff(open_midi)
-        new_midi = seq_chunks_w_noteoff_to_prettymidi(seq_chunks)
+        seq_chunks = pretty_midi_to_seq_chunks(open_midi)
+        new_midi = seq_chunks_to_pretty_midi(seq_chunks)
         # Save midi
         new_midi.write(noteoff_dir + file)
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)

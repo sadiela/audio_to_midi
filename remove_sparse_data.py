@@ -87,13 +87,14 @@ if __name__ == '__main__':
     
     midi_lengths = list(length_dict.values())
 
+    with open('./data_lists/length_dict.p', 'wb') as fp:
+        pickle.dump(length_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
     plt.hist(length_dict, bins=30)
     plt.title("MIDI Length Distribution")
     plt.xlabel("Length (s)")
     plt.show() 
 
-    with open('./length_dict.p', 'wb') as fp:
-        pickle.dump(length_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
     sys.exit(0)
 

@@ -107,6 +107,8 @@ def seq_chunks_w_noteoff_to_prettymidi(seq_chunks):
     cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!
     cur_inst = pretty_midi.Instrument(program=1)
     unended_notes = []
+    print(seq_chunks.shape)
+    seq_chunks = seq_chunks.T
     for i, chunk in enumerate(seq_chunks):
         base_time = SEG_LENGTH_SECS*i # whatever chunk we are at
         cur_time = base_time
@@ -125,13 +127,12 @@ def seq_chunks_w_noteoff_to_prettymidi(seq_chunks):
                 else: # NOTE START
                     new_note = {}
                     new_note["pitch"] = event-3
-                    new_note["start"] = cur_time
+                    new_note["start"] = cur_time 
                     unended_notes.append(new_note)
             elif event in range(130,631): # TIME SHIFT!
                 cur_time = base_time + event_dictionary[event]
             elif event == 0:
                 break # end of this chunk
-    
     cur_midi.instruments.append(cur_inst)
     return cur_midi
 
@@ -139,7 +140,7 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
     note_starts = [(note.pitch,note.start) for note in open_midi.instruments[0].notes]
     note_ends = [(note.pitch,note.end) for note in open_midi.instruments[0].notes]
     all_note_tuples = note_starts + note_ends
-    sorted(all_note_tuples,key=itemgetter(1))
+    all_note_tuples = sorted(all_note_tuples,key=itemgetter(1))
     num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1
     event_sequences = [[2] for _ in range(num_segs)] 
     previous_note_time = 0.0
@@ -158,6 +159,7 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
     #array_seqs = array_seqs.astype('int8')
+    print(list(array_seqs[:,0]))
     return array_seqs
 
 def pretty_midi_to_seq_chunks(open_midi): 
@@ -224,7 +226,7 @@ if __name__ == '__main__':
     # Test by converting back to MIDI
     #start_time = timer()
     for file in mid_files:
-        #print(file)
+        print(file)
         #print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
         seq_chunks = pretty_midi_to_seq_chunks_w_noteoff(open_midi)
@@ -233,7 +235,7 @@ if __name__ == '__main__':
         new_midi.write(noteoff_dir + file)
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
-        #input("Continue...")
+        input("Continue...")
     #end_time = timer()
 
     midis_to_wavs(noteoff_dir)

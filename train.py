@@ -20,7 +20,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
     losses = 0
 
     start_time = timer()
-    for i, data in tqdm(enumerate(train_dataloader)):
+    for i, data in enumerate(train_dataloader):
         try:
             src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
             tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
@@ -46,8 +46,8 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
             logging.info("ERROR IN TRAINING LOOP: %s", str(e))
             print("RUNTIME ERROR", e)
         except Exception as ex:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
-            print("ERROR", e)
+            logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
+            print("ERROR", ex)
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):

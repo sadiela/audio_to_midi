@@ -159,7 +159,7 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
     #array_seqs = array_seqs.astype('int8')
-    print(list(array_seqs[:,0]))
+    #print(list(array_seqs[:,0]))
     return array_seqs
 
 def pretty_midi_to_seq_chunks(open_midi): 
@@ -235,7 +235,6 @@ if __name__ == '__main__':
         new_midi.write(noteoff_dir + file)
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
-        input("Continue...")
     #end_time = timer()
 
     midis_to_wavs(noteoff_dir)

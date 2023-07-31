@@ -8,6 +8,14 @@ import matplotlib.pyplot as plt
 import random
 import sys
 
+def get_track_lengths(midi_dir, extension, length_dict):
+    file_list = os.listdir(midi_dir / extension)
+    print("NUMBER OF FILES:", len(file_list))
+    for fname in tqdm(file_list): 
+        open_midi = pretty_midi.PrettyMIDI(str(midi_dir / extension / fname))
+        length_dict[extension + '/' + fname] = open_midi.get_end_time()
+
+
 def find_sparse_midis(midi_directory, extension, dense_tracks, sparsity_dict, sparsity_cutoff=0.25):
     num_sparse = 0
     file_list = os.listdir(midi_directory / extension)
@@ -63,14 +71,32 @@ def create_datasets(dense_filepath):
 if __name__ == '__main__':
     print("FIND SPARSE MIDIS!")
 
-    create_datasets('./densefiles.p')
-    sys.exit()
+    #create_datasets('./densefiles.p')
 
     extension = folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f']
     dense_tracks = []
     sparsity_dict = {}
     total_num_files = 0
     total_sparse_files = 0
+
+    length_dict = {}
+    for e in folder_extensions:
+        print(e)
+        print("dict keys", len(length_dict.keys()))
+        get_track_lengths(Path('./lmd_tracks'), e, length_dict)
+    
+    midi_lengths = list(length_dict.values())
+
+    plt.hist(length_dict, bins=30)
+    plt.title("MIDI Length Distribution")
+    plt.xlabel("Length (s)")
+    plt.show() 
+
+    with open('./length_dict.p', 'wb') as fp:
+        pickle.dump(length_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+    sys.exit(0)
+
 
     for e in folder_extensions:
         all_files, sparse_files = find_sparse_midis(Path('./lmd_tracks'), e, dense_tracks, sparsity_dict)

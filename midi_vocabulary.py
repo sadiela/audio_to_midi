@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
+from operator import itemgetter
 
 
 SEG_LENGTH_SECS = 4.0879375
@@ -102,28 +103,67 @@ def seq_chunks_to_pretty_midi(seq_chunks):
     #if not os.path.exists(target_dir + 'seq_conversion1.mid'):
     #    cur_midi.write(str(target_dir + 'seq_conversion1.mid'))
 
+def seq_chunks_w_noteoff_to_prettymidi(seq_chunks):
+    cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!
+    cur_inst = pretty_midi.Instrument(program=1)
+    unended_notes = []
+    print(seq_chunks.shape)
+    seq_chunks = seq_chunks.T
+    for i, chunk in enumerate(seq_chunks):
+        base_time = SEG_LENGTH_SECS*i # whatever chunk we are at
+        cur_time = base_time
+        for event in chunk: 
+            if event in range(3, 130): # NOTE EVENT!
+                # Check if note is in unended note list
+                unended_note = None
+                for i,note in enumerate(unended_notes):
+                    if event-3 == note["pitch"]:
+                        unended_note = unended_notes.pop(i) # removes it from the unended note list
+                        break
+                if unended_note is not None:
+                    # END THE NOTE AND ADD IT TO THE DICT
+                    note = pretty_midi.Note(velocity=100, pitch=event-3, start=unended_note['start'], end=cur_time)
+                    cur_inst.notes.append(note)
+                else: # NOTE START
+                    new_note = {}
+                    new_note["pitch"] = event-3
+                    new_note["start"] = cur_time 
+                    unended_notes.append(new_note)
+            elif event in range(130,631): # TIME SHIFT!
+                cur_time = base_time + event_dictionary[event]
+            elif event == 0:
+                break # end of this chunk
+    cur_midi.instruments.append(cur_inst)
+    return cur_midi
+
 def pretty_midi_to_seq_chunks_w_noteoff(open_midi): 
-    note_starts = [note.start for note in open_midi.instruments[0].notes]
-    note_ends = [note.end for note in open_midi.instruments[0].notes]
-    num_segs = int((note_ends[-1] // SEG_LENGTH_SECS)) + 1
+    note_starts = [(note.pitch,note.start) for note in open_midi.instruments[0].notes]
+    note_ends = [(note.pitch,note.end) for note in open_midi.instruments[0].notes]
+    all_note_tuples = note_starts + note_ends
+    all_note_tuples = sorted(all_note_tuples,key=itemgetter(1))
+    num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1
     event_sequences = [[2] for _ in range(num_segs)] 
-
-    for note in open_midi.instruments[0].notes:
-        note_start_seg = int((note.start // SEG_LENGTH_SECS))
-        note_end_seg = int((note.end // SEG_LENGTH_SECS))
-
+    previous_note_time = 0.0
+    for note in all_note_tuples:
+        cur_seg = int((note[1] // SEG_LENGTH_SECS))
+        if note[1] > previous_note_time:
+            note_offset = note[1] - cur_seg*SEG_LENGTH_SECS
+            rounded_offset = round(note_offset, 2)
+            if rounded_offset != 0.0:
+                event_sequences[cur_seg].append(event_idxs[rounded_offset])
+        event_sequences[cur_seg].append(event_idxs["NOTE:"+str(note[0])])
+        previous_note_time = note[1]
     
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
     array_seqs = np.array(event_sequences).T
     #array_seqs = array_seqs.astype('int8')
+    print(list(array_seqs[:,0]))
     return array_seqs
 
 def pretty_midi_to_seq_chunks(open_midi): 
-    note_starts = [note.start for note in open_midi.instruments[0].notes]
-    note_ends = [note.end for note in open_midi.instruments[0].notes]
-    num_segs = int((note_ends[-1] // SEG_LENGTH_SECS)) + 1
+    num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1
     event_sequences = [[2] for _ in range(num_segs)] # Start with BOS TOKEN
     cur_seg = 0
     previous_note_time = 0.0
@@ -164,28 +204,43 @@ def midi_to_wav(midi_path,wav_path):
     print(cmd)
     ret_status = os.system(cmd)
 
+def midis_to_wavs(midi_path, wav_path=None):
+    if wav_path is None: 
+        wav_path = midi_path
+    midis = [f for f in os.listdir(midi_path) if f[-3:]=='mid']
+    for m in midis:
+        midi_to_wav(midi_path + m, wav_path + m[:-3] + 'wav')
+
 
 if __name__ == '__main__':
 
     midi_directory = './small_matched_data/midi/'
     mid_files = os.listdir(midi_directory)
     target_dir = './small_matched_data/midi_reconverted/'
+    noteoff_dir = './small_matched_data/midi_reconverted_noteoff/'
     seq_dir = './small_matched_data/sequences/'
     seq_files = os.listdir(seq_dir)
 
     # start with just note onset and time events!
 
     # Test by converting back to MIDI
-    start_time = timer()
+    #start_time = timer()
     for file in mid_files:
-        #print(file)
+        print(file)
         #print(midi_directory + file)
         open_midi = pretty_midi.PrettyMIDI(midi_directory + file)
-        seq_chunks = pretty_midi_to_seq_chunks(open_midi)
+        seq_chunks = pretty_midi_to_seq_chunks_w_noteoff(open_midi)
+        new_midi = seq_chunks_w_noteoff_to_prettymidi(seq_chunks)
+        # Save midi
+        new_midi.write(noteoff_dir + file)
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
-        #input("Continue...")
-    end_time = timer()
+        input("Continue...")
+    #end_time = timer()
+
+    midis_to_wavs(noteoff_dir)
+
+    sys.exit(0)
 
     print("CONVERT ON THE FLY RUNTIME:",end_time-start_time)
 

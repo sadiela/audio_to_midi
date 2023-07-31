@@ -51,23 +51,24 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):
-    model.eval()
     losses = 0
+    model.eval()
 
-    for src, tgt in eval_dataloader:
-        try: 
-            src = src.to(DEVICE).to(torch.float32)
-            tgt = tgt.to(DEVICE).to(torch.long)
+    with torch.no_grad(): # do not need to save gradients since we will not be running a backwards pass
+        for src, tgt in eval_dataloader:
+            try: 
+                src = src.to(DEVICE).to(torch.float32)
+                tgt = tgt.to(DEVICE).to(torch.long)
 
-            tgt_input = tgt[:-1, :]
+                tgt_input = tgt[:-1, :]
 
-            logits = model(src, tgt_input)
+                logits = model(src, tgt_input)
 
-            tgt_out = tgt[1:, :]
-            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
-            losses += loss.item()
-        except Exception as e:
-            logging.info("ERROR: %s", str(e))
+                tgt_out = tgt[1:, :]
+                loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+                losses += loss.item()
+            except Exception as e:
+                logging.info("ERROR: %s", str(e))
 
     return losses / len(list(eval_dataloader))
 
@@ -105,6 +106,8 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     return transformer, optimizer, (num_epochs - len(previous_models))
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
+    train_losses = []
+    eval_losses = []
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
@@ -119,6 +122,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         train_loss = train_epoch(transformer, optimizer, loss_fn, train_dataloader)
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
+        train_losses.append(train_loss)
         # SAVE INTERMEDIATE MODEL
         cur_model_file = get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
         torch.save({
@@ -127,9 +131,10 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
                     'optimizer_state_dict': optimizer.state_dict(),
                     }, cur_model_file) # incremental saves
         logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
-        val_loss = evaluate(transformer, loss_fn, eval_dataloader)
+        eval_loss = evaluate(transformer, loss_fn, eval_dataloader)
+        eval_losses.append(eval_loss)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, val_loss, (end_time-start_time))
-    return transformer
+    return transformer, train_losses, eval_losses
 
 def transcribe_midi(model, audio_file): 
     M_db = calc_mel_spec(audio_file=audio_file)
@@ -209,8 +214,15 @@ if __name__ == '__main__':
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, eval_paths=eval_midi_paths)
+    transformer, train_losses, eval_losses = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, eval_paths=eval_midi_paths)
     
+    results = {}
+    results["trainloss"] = train_losses
+    results["evalloss"] = eval_losses
+
+    with open(results_file, 'wb') as fp:
+        pickle.dump(results, fp)
+
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
     print("PLOTTING MIDI")

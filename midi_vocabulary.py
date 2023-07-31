@@ -229,9 +229,9 @@ if __name__ == '__main__':
     print("NUM MIDS:", len(dense_midis))
 
     for mid in tqdm(dense_midis):
-        open_midi = pretty_midi.PrettyMIDI(midi_stub + mid)
-        seq_chunks = pretty_midi_to_seq_chunks(open_midi)
         if not os.path.exists(seq_stub + mid[:-3] + 'npy'):
+            open_midi = pretty_midi.PrettyMIDI(midi_stub + mid)
+            seq_chunks = pretty_midi_to_seq_chunks(open_midi)
             np.save(seq_stub + mid[:-3] + 'npy', seq_chunks)
 
     sys.exit(0)

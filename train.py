@@ -21,30 +21,30 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in tqdm(enumerate(train_dataloader)):
-        #try:
-        src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
-        tgt_input = tgt[:-1, :] # why???
+        try:
+            src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
+            tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
+            tgt_input = tgt[:-1, :] # why???
 
-        logits = model(src, tgt_input)
-        optimizer.zero_grad()
+            logits = model(src, tgt_input)
+            optimizer.zero_grad()
 
-        logits = logits.reshape(-1, logits.shape[-1])
-        #print(logits.shape)
-        tgt_out = tgt[1:, :].reshape(-1)
+            logits = logits.reshape(-1, logits.shape[-1])
+            tgt_out = tgt[1:, :].reshape(-1)
 
-        loss = loss_fn(logits, tgt_out)
-        loss.backward()
+            loss = loss_fn(logits, tgt_out)
+            loss.backward()
 
-        optimizer.step()
-        losses += loss.item()
-        if i%100 ==0:
-            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-            end_time = timer()
-            logging.info("Time: %f", (end_time-start_time))
-            start_time = timer()
-        #except Exception as e:
-        #    logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+            optimizer.step()
+            losses += loss.item()
+            if i%100 ==0:
+                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+                end_time = timer()
+                logging.info("Time: %f", (end_time-start_time))
+                start_time = timer()
+        except RuntimeError as e:
+            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+            print("ERROR", e)
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):

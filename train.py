@@ -75,7 +75,6 @@ def evaluate(model, loss_fn, eval_dataloader):
 def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs):
     transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
     #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
-    optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
 
     # check for previously trained models: 
     previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
@@ -85,12 +84,15 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
         for p in transformer.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p) # Why are we using this? 
+        optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
     else: 
         most_recent_model = get_newest_file(previous_models)
         logging.info("loading parameters from most recent model file: %s", most_recent_model)
         stat_dictionary = torch.load(modeldir + '/' + most_recent_model, map_location=torch.device(DEVICE))
         model_params = stat_dictionary["model_state_dict"]
         transformer.load_state_dict(model_params)
+        transformer.to(DEVICE) # have to do this before constructing optimizers...
+        optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
         optimizer.load_state_dict(stat_dictionary['optimizer_state_dict']) # load optimizer back as well!
 
     param_size = 0
@@ -102,8 +104,6 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     size_all_mb = (param_size + buffer_size) / 1024**2
     print('model size: {:.3f}MB'.format(size_all_mb))
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
-
-    transformer = transformer.to(DEVICE)
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 

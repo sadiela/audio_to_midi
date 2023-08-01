@@ -223,8 +223,10 @@ if __name__ == '__main__':
     results["trainloss"] = train_losses
     results["evalloss"] = eval_losses
 
-    with open(results_file, 'wb') as fp:
-        pickle.dump(results, fp)
+    #with open(results_file, 'wb') as fp:
+    #    pickle.dump(results, fp)
+    with open(results_file, 'w') as fp:
+        yaml.dump(results, fp)
 
     '''print("TRANSCRIBING MIDI")
     midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')

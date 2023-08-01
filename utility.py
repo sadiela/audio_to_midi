@@ -8,7 +8,6 @@ def get_newest_file(fnames, prefix="model-"):
     max_num = int(fnames[0][6:].split('.')[0])
     for f in fnames: 
         number = int(f[6:].split('.')[0])
-        print(f, number)
         if number > max_num:
             newest = f 
             max_num = number

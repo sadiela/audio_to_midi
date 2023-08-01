@@ -104,13 +104,11 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
 
     transformer = transformer.to(DEVICE)
-    optimizer = optimizer.to(DEVICE)
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
     transformer.to(DEVICE)
-    optimizer.to(DEVICE)
     train_losses = []
     eval_losses = []
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)

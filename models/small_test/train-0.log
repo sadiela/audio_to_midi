@@ -11,3 +11,5 @@ INFO:root:ITERATION: 300, LOSS: 4.866914
 INFO:root:Time: 421.548713
 INFO:root:ITERATION: 400, LOSS: 4.807775
 INFO:root:Time: 439.574667
+INFO:root:Finished training epoch 1
+INFO:root:Saved model at epoch 1 to ./models/small_test/model-1.pt

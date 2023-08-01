@@ -1,0 +1,35 @@
+INFO:root:model size: 205.735MB
+INFO:root:Training transformer model
+INFO:root:TRAINING BATCH SIZE: 2
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+INFO:root:ERROR IN TRAINING LOOP: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!

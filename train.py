@@ -16,38 +16,38 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
 def train_epoch(model, optimizer, loss_fn, train_dataloader):
-    model.train().to(DEVICE)
+    model.train()
     losses = 0
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        try:
-            src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-            tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
-            tgt_input = tgt[:-1, :] # why???
+        #try:
+        src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
+        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
+        tgt_input = tgt[:-1, :] # why???
 
-            logits = model(src, tgt_input)
-            optimizer.zero_grad()
+        logits = model(src, tgt_input)
+        optimizer.zero_grad()
 
-            logits = logits.reshape(-1, logits.shape[-1])
-            tgt_out = tgt[1:, :].reshape(-1)
+        logits = logits.reshape(-1, logits.shape[-1])
+        tgt_out = tgt[1:, :].reshape(-1)
 
-            loss = loss_fn(logits, tgt_out)
-            loss.backward()
+        loss = loss_fn(logits, tgt_out)
+        loss.backward()
 
-            optimizer.step()
-            losses += loss.item()
-            if i%100 ==0:
-                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-                end_time = timer()
-                logging.info("Time: %f", (end_time-start_time))
-                start_time = timer()
-        except RuntimeError as e:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
-            print("RUNTIME ERROR", e)
-        except Exception as ex:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
-            print("ERROR", ex)
+        optimizer.step()
+        losses += loss.item()
+        if i%100 ==0:
+            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+            end_time = timer()
+            logging.info("Time: %f", (end_time-start_time))
+            start_time = timer()
+        #except RuntimeError as e:
+        #    logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+        #    print("RUNTIME ERROR", e)
+        #except Exception as ex:
+        #    logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
+        #    print("ERROR", ex)
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):
@@ -81,11 +81,13 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
 
     if len(previous_models) == 0:
+        logging.log("training new transformer from scratch")
         for p in transformer.parameters():
             if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+                nn.init.xavier_uniform_(p) # Why are we using this? 
     else: 
         most_recent_model = get_newest_file(previous_models)
+        logging.info("loading parameters from most recent model file: %s", most_recent_model)
         stat_dictionary = torch.load(modeldir + '/' + most_recent_model, map_location=torch.device(DEVICE))
         model_params = stat_dictionary["model_state_dict"]
         transformer.load_state_dict(model_params)
@@ -102,10 +104,13 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
 
     transformer = transformer.to(DEVICE)
+    optimizer = optimizer.to(DEVICE)
 
     return transformer, optimizer, (num_epochs - len(previous_models))
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
+    transformer.to(DEVICE)
+    optimizer.to(DEVICE)
     train_losses = []
     eval_losses = []
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
@@ -206,8 +211,6 @@ if __name__ == '__main__':
     with open(eval_midi_pickle, 'rb') as fp:
         eval_midi_paths = pickle.load(fp)
     
-    #train_midi_paths = os.listdir(midi_dir)
-    #eval_midi_paths = os.listdir(midi_dir)
 
     # save param file again
     transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)

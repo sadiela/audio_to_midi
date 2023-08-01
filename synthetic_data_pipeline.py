@@ -114,6 +114,13 @@ def gen_small_dataset(midi_folder, raw_audio_folder):
     midi_files = os.listdir(midi_folder)
     process_midis_to_wavs(midi_files, midi_folder, raw_audio_folder)
 
+def convert_list(midi_stub, file_list, out_stub): 
+    for t in file_list:
+        midi_path = midi_stub + t 
+        output_path = out_stub + t[:-3] + 'wav'
+        if not os.path.isfile(output_path):
+            cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+            ret_status = os.system(cmd)
 
 if __name__ == '__main__':
     #small_midi = './small_matched_data/midi'
@@ -129,18 +136,18 @@ if __name__ == '__main__':
     folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
 
     # create directories
-    for f in folder_extensions:
-        os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
+    #for f in folder_extensions:
+    #    os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
 
     # load 
-    small_testfiles = read_list('./data_lists/testfiles_sm.p')
+    med_testfiles = read_list('./data_lists/testfiles_med.p')
+    med_trainfiles = read_list('./data_lists/trainfiles_med.p')
+    
+    print("CONVERTING!")
+    convert_list(midi_stub, med_testfiles, raw_audio_stub)
+    convert_list(midi_stub, med_trainfiles, raw_audio_stub)
 
-    for t in small_testfiles:
-        midi_path = track_stub + t 
-        output_path = raw_audio_stub + t[:-3] + 'wav'
-        if not os.path.isfile(output_path):
-            cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-            ret_status = os.system(cmd)
+    
 
     sys.exit(0)
 

@@ -41,47 +41,95 @@ def create_datasets(dense_filepath):
     ### BUILD DATA LISTS
     with open(dense_filepath, 'rb') as fp:
         dense_filelist = pickle.load(fp)
+
+    print("LOADED FILE LIST")
+    print("NUM FILES", len(dense_filelist))
     
     test_files = [f for f in dense_filelist if f[0]=='e' or f[0]=='f']
-    with open('./testfiles.p', 'wb') as fp:
+    with open('./data_lists/testfiles_2.p', 'wb') as fp:
         pickle.dump(test_files, fp, pickle.HIGHEST_PROTOCOL)
+
+    print("SAVED TESTFILES FILE LIST")
     
-    train_files = [f for f in dense_filelist if f not in test_files]
-    with open('./trainfiles.p', 'wb') as fp:
+    train_files = [f for f in dense_filelist if f[0] in ['0','1','2','3','4','5','6','7','8','9','a','b','c','d']]
+    with open('./data_lists/trainfiles_2.p', 'wb') as fp:
         pickle.dump(train_files, fp, pickle.HIGHEST_PROTOCOL)
 
-    print("LENGTH OF TEST AND TRAIN LISTS:", len(test_files), len(train_files))
+    print("SAVED TRAINFILES FILE LIST")
 
-    input("Continue...")
+    print("LENGTH OF TEST AND TRAIN LISTS:", len(test_files), len(train_files))
 
     random.shuffle(test_files)
     random.shuffle(train_files)
 
-    with open('./testfiles_sm.p', 'wb') as fp:
+    with open('./data_lists/testfiles_sma.p', 'wb') as fp:
         pickle.dump(test_files[:100], fp)
     
-    with open('./testfiles_med.p', 'wb') as fp:
+    with open('./data_lists/testfiles_medi.p', 'wb') as fp:
         pickle.dump(test_files[:1000], fp)
     
-    with open('./trainfiles_sm.p', 'wb') as fp:
+    with open('./data_lists/trainfiles_sma.p', 'wb') as fp:
         pickle.dump(train_files[:1000], fp)
     
-    with open('./trainfiles_med.p', 'wb') as fp:
+    with open('./data_lists/trainfiles_medi.p', 'wb') as fp:
         pickle.dump(train_files[:10000], fp)
     
 if __name__ == '__main__':
+    print("REMAKE DATASETS")
+    create_datasets('./data_lists/dense_filtered.p')
+
+    sys.exit(0)
     print("FIND LENGTH STATS!")
 
     with open('./data_lists/length_dict.p', 'rb') as fp:
         length_dict = pickle.load(fp)
 
+    with open('./data_lists/densefiles.p', 'rb') as fp:
+        dense_files = pickle.load(fp)
+
     print("dict loaded")
 
-    length_list = list(length_dict.values())
-    lengths = pd.Series(length_list)
+    #length_list = list(length_dict.values())
+    #lengths = pd.Series(length_list)
 
 
-    length_list.sort()
+    tuple_list = [(k, v) for k, v in length_dict.items()]
+    tuple_list = sorted(tuple_list,key=lambda x: x[1])
+
+    min_length = 5 # in seconds
+    max_length = 5*60 # in seconds, 5 min
+    min_idx = 0 
+    max_idx = len(tuple_list)
+    for i, tup in enumerate(tuple_list): 
+        if tup[1] < min_length:
+            min_idx = i 
+        if tup[1] > max_length:
+            max_idx = i
+            break 
+
+    print("MIN AND MAX IDXs:", min_idx, max_idx)
+
+    name_list = [item[0] for item in tuple_list]
+
+    print("LENGTH OF LIST:", len(name_list))
+
+    filtered_names = name_list[min_idx+1:max_idx]
+    print("LENGTH OF FILTERED LIST:", len(filtered_names))
+
+
+    dense_goodlength = list(set(dense_files) & set(filtered_names))
+    print("LENGTH OF INTERSECTION:", len(dense_goodlength))
+    # GET INTERSECTION OF LISTS!
+
+    with open('./data_lists/dense_filtered.p', 'wb') as fp:
+        pickle.dump(dense_goodlength, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+    print("SAVED TO FILE")
+
+    sys.exit(0)
+        
+
+    #length_list.sort()
 
     lengths_in_frames = [l/4 for l in length_list]
 

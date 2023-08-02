@@ -129,6 +129,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
     train_losses = []
     eval_losses = []
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+    num_previous_models = len([f for f in os.listdir(modeldir) if f[-2:] == 'pt' ])
     
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
     training_data = AudioMidiDataset(train_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
@@ -144,16 +145,16 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         end_time = timer()
         train_losses.append(train_loss)
         # SAVE INTERMEDIATE MODEL
-        cur_model_file = modeldir + '/model-' + str(epoch) + '.pt' #get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
+        cur_model_file = modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' #get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
         torch.save({
-                    'epoch': epoch,
+                    'epoch': num_previous_models + epoch,
                     'model_state_dict': transformer.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     }, cur_model_file) # incremental saves
-        logging.info("Saved model at epoch %d to %s", epoch, cur_model_file)
+        logging.info("Saved model at epoch %d to %s", num_previous_models + epoch, cur_model_file)
         eval_loss = evaluate(transformer, loss_fn, eval_dataloader)
         eval_losses.append(eval_loss)
-        logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch, train_loss, eval_loss, (end_time-start_time))
+        logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch+num_previous_models, train_loss, eval_loss, (end_time-start_time))
     return transformer, train_losses, eval_losses
 
 def transcribe_midi(model, audio_file): 

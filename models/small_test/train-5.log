@@ -1,8 +1,0 @@
-INFO:root:loading parameters from most recent model file: model-3.pt
-INFO:root:model size: 205.735MB
-INFO:root:Training transformer model
-INFO:root:TRAINING BATCH SIZE: 2
-INFO:root:ITERATION: 0, LOSS: 5.871922
-INFO:root:Time: 7.143622
-INFO:root:ITERATION: 100, LOSS: 5.491713
-INFO:root:Time: 422.962758

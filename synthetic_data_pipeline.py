@@ -117,12 +117,11 @@ def gen_small_dataset(midi_folder, raw_audio_folder):
 def convert_list(midi_stub, file_list, out_stub): 
     for t in file_list:
         midi_path = midi_stub + t 
+        print(midi_path)
         output_path = out_stub + t[:-3] + 'wav'
         if not os.path.isfile(output_path):
             cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-            print(cmd)
             ret_status = os.system(cmd)
-        input("Continue...")
 
 if __name__ == '__main__':
     #small_midi = './small_matched_data/midi'
@@ -142,6 +141,10 @@ if __name__ == '__main__':
     #    os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
 
     # load 
+    densefiles = read_list('./data_lists/densefiles.p')
+    convert_list(track_stub, densefiles, raw_audio_stub)
+    sys.exit(0)
+
     med_testfiles = read_list('./data_lists/testfiles_med.p')
     med_trainfiles = read_list('./data_lists/trainfiles_med.p')
     

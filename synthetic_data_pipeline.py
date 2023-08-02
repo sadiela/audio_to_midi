@@ -119,6 +119,7 @@ def convert_list(midi_stub, file_list, out_stub):
         midi_path = midi_stub + t 
         print(midi_path)
         output_path = out_stub + t[:-3] + 'wav'
+        print(midi_path)
         if not os.path.isfile(output_path):
             cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
             ret_status = os.system(cmd)

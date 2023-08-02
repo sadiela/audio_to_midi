@@ -9,11 +9,28 @@ import argparse
 import yaml
 import logging
 from tqdm import tqdm
+import sys
 
 torch.manual_seed(0)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger, level):
+       self.logger = logger
+       self.level = level
+       self.linebuf = ''
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
+
+    def flush(self):
+        pass
 
 def train_epoch(model, optimizer, loss_fn, train_dataloader):
     model.train()
@@ -172,7 +189,11 @@ if __name__ == '__main__':
     loglevel= args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
-    logging.basicConfig(filename=logfile, level=numeric_level)
+    logging.basicConfig(filename=logfile, level=logging.DEBUG)
+
+    log = logging.getLogger('train')
+    sys.stdout = StreamToLogger(log,logging.INFO)
+    sys.stderr = StreamToLogger(log,logging.ERROR)
 
     # qrsh -l gpus=1 -l gpu_c=6
     # cd /projectnb/textconv/sadiela/midi_generation/scripts

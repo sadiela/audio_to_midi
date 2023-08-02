@@ -19,7 +19,7 @@ def num_samples(desired_length_in_seconds, sr):
    # if you want 3 second chunks, how many samples do you need
    return 1/sr * desired_length_in_seconds
 
-def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1):
+def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1, max_frames=32):
     """ Split audio into frames """
     #print(signal.shape)
     signal_length = signal.shape[0]

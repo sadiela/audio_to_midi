@@ -7,6 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 import random
 import sys
+import pandas as pd
 
 def get_track_lengths(midi_dir, extension, length_dict):
     file_list = os.listdir(midi_dir / extension)
@@ -69,7 +70,39 @@ def create_datasets(dense_filepath):
         pickle.dump(train_files[:10000], fp)
     
 if __name__ == '__main__':
-    print("FIND SPARSE MIDIS!")
+    print("FIND LENGTH STATS!")
+
+    with open('./data_lists/length_dict.p', 'rb') as fp:
+        length_dict = pickle.load(fp)
+
+    print("dict loaded")
+
+    length_list = list(length_dict.values())
+    lengths = pd.Series(length_list)
+
+
+    length_list.sort()
+
+    lengths_in_frames = [l/4 for l in length_list]
+
+    print(lengths.describe())
+
+    plt.hist(length_list[:1000000], bins=50) # [:900000]
+    plt.title("MIDI Length Distribution")
+    plt.xlabel("Length (s)")
+    plt.show() 
+
+    plt.hist(lengths_in_frames[:1000000], bins=50) # [:900000]
+    plt.title("MIDI Length Distribution")
+    plt.xlabel("Length (frames)")
+    plt.show() 
+
+
+    print("DONE")
+
+    sys.exit(0)
+
+
 
     #create_datasets('./densefiles.p')
 

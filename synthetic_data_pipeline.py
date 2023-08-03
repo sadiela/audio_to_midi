@@ -1,4 +1,5 @@
 import os
+import time
 import pretty_midi
 from tqdm import tqdm
 #from numpy import ndarray
@@ -74,9 +75,8 @@ def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
         output_path = wav_dir + midi[:-3]+'wav'
         midi_path = midi_dir  + midi
         print("MIDI PATH AND OUTPUT PATH:", midi_path, output_path)
-        input("Continue...")
+        time.sleep(2)
         cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-        print(cmd)
         ret_status = os.system(cmd)
         if ret_status != 0:
             print("RETURN STATUS:", ret_status)

@@ -97,7 +97,7 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
 
     if len(previous_models) == 0:
-        logging.log("training new transformer from scratch")
+        logging.info("training new transformer from scratch")
         for p in transformer.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p) # Why are we using this? 
@@ -192,9 +192,9 @@ if __name__ == '__main__':
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
 
-    log = logging.getLogger('train')
-    sys.stdout = StreamToLogger(log,logging.INFO)
-    sys.stderr = StreamToLogger(log,logging.ERROR)
+    #log = logging.getLogger('train')
+    #sys.stdout = StreamToLogger(log,logging.INFO)
+    #sys.stderr = StreamToLogger(log,logging.ERROR)
 
     # qrsh -l gpus=1 -l gpu_c=6
     # cd /projectnb/textconv/sadiela/midi_generation/scripts

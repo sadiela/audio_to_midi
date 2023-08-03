@@ -74,13 +74,12 @@ def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
         output_path = wav_dir + midi[:-3]+'wav'
         midi_path = midi_dir  + midi
         print("MIDI PATH AND OUTPUT PATH:", midi_path, output_path)
-        input("Continue...")
-        cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-        print(cmd)
-        ret_status = os.system(cmd)
-        if ret_status != 0:
-            print("RETURN STATUS:", ret_status)
-            sys.exit(ret_status)
+        if not os.path.isfile(output_path):
+            cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+            ret_status = os.system(cmd)
+            if ret_status != 0:
+                print("RETURN STATUS:", ret_status)
+                sys.exit(ret_status)
         
     
 def midis_to_wavs_multi(midi_list, midi_dir, wav_dir=None, num_processes=1): # 60!!!

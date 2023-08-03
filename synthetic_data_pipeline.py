@@ -71,8 +71,10 @@ def sep_and_crop(midi_directory, target_directory):
 # can parallelize these conversions since I have 8 CPU cores
 def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
     for midi in midi_files: 
-        output_path = wav_dir +'/' + midi[:-3]+'wav'
-        midi_path = midi_dir + '/' + midi
+        output_path = wav_dir + midi[:-3]+'wav'
+        midi_path = midi_dir  + midi
+        print("MIDI PATH AND OUTPUT PATH:", midi_path, output_path)
+        input("Continue...")
         cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
         print(cmd)
         ret_status = os.system(cmd)
@@ -81,18 +83,8 @@ def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
             sys.exit(ret_status)
         
     
-def midis_to_wavs_multi(midi_dir, wav_dir=None, num_processes=1):
-    if wav_dir == None: 
-        wav_dir = midi_dir
-    if not os.path.isdir(str(wav_dir)):
-        print("creating target directory")
-        os.makedirs(str(wav_dir))
-    midi_dir_list = os.listdir(midi_dir)
-    # skip files that have already been converted
-    midi_list = [f for f in midi_dir_list if f[-3:] == 'mid' and not os.path.isfile(str(wav_dir) +'/' + f[:-3]+'wav')]
-
+def midis_to_wavs_multi(midi_list, midi_dir, wav_dir=None, num_processes=1): # 60!!!
     print("LIST LEN:", len(midi_list))
-    input("Continue...")
     # split into chunks:
     chunk_size = len(midi_list) // num_processes
     midi_chunks = [midi_list[i:i+chunk_size] for i in range(0, len(midi_list), chunk_size)]
@@ -129,6 +121,14 @@ if __name__ == '__main__':
     #small_raw_audio = './small_matched_data/raw_audio'
     #gen_small_dataset(small_midi, small_raw_audio)
     #sys.exit(1)
+
+    midi_list = read_list('./data_lists/dense_filtered.p')
+    midi_dir = './lmd_tracks/'
+    raw_audio_stub = '/raw_audio/'
+    midis_to_wavs_multi(midi_list, midi_dir, wav_dir=raw_audio_stub, num_processes=48)
+    print("DONE!")
+
+    sys.exit(0)
 
     print("Converting tracks to raw audio")
     midi_stub = './lmd_full/'

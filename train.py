@@ -186,7 +186,6 @@ if __name__ == '__main__':
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     results_file = modeldir + "/results.yaml"
     
-    '''LOGGING STUFF'''
     loglevel= args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
@@ -201,7 +200,6 @@ if __name__ == '__main__':
     # CONTINUED TRAINING
 
     ### save hyperparameters to YAML file in folder ###
-    # Make sure there is a parameter file! Need one to continue
     try: 
         with open(str(param_file)) as file: 
             model_hyperparams = yaml.load(file, Loader=yaml.FullLoader)

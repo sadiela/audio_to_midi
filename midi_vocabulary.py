@@ -158,7 +158,7 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
-    array_seqs = np.array(event_sequences).T
+    array_seqs = np.array(event_sequences)
     #array_seqs = array_seqs.astype('int8')
     #print(list(array_seqs[:,0]))
     return array_seqs
@@ -192,7 +192,7 @@ def pretty_midi_to_seq_chunks(open_midi):
     for seq in event_sequences:
         while (len(seq)) < MAX_LENGTH:
             seq.append(1) # PADDING!
-    array_seqs = np.array(event_sequences).T
+    array_seqs = np.array(event_sequences)
     array_seqs = array_seqs.astype('int16')
     return array_seqs
 

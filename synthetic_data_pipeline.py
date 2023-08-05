@@ -74,13 +74,12 @@ def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
     for midi in midi_files: 
         output_path = wav_dir + midi[:-3]+'wav'
         midi_path = midi_dir  + midi
-        print("MIDI PATH AND OUTPUT PATH:", midi_path, output_path)
-        time.sleep(2)
-        cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-        ret_status = os.system(cmd)
-        if ret_status != 0:
-            print("RETURN STATUS:", ret_status)
-            sys.exit(ret_status)
+        if not os.path.isfile(output_path):
+            cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
+            ret_status = os.system(cmd)
+            if ret_status != 0:
+                #print("RETURN STATUS:", ret_status)
+                sys.exit(ret_status)
         
     
 def midis_to_wavs_multi(midi_list, midi_dir, wav_dir=None, num_processes=1): # 60!!!
@@ -121,6 +120,9 @@ if __name__ == '__main__':
     #small_raw_audio = './small_matched_data/raw_audio'
     #gen_small_dataset(small_midi, small_raw_audio)
     #sys.exit(1)
+
+    sys.stdout = open('synthetic_data_pipe.log', 'w')
+    sys.stderr = sys.stdout
 
     midi_list = read_list('./data_lists/dense_filtered.p')
     midi_dir = './lmd_tracks/'

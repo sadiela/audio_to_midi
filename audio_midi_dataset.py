@@ -11,7 +11,7 @@ from midi_vocabulary import *
 MAX_BATCH=18
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/'):
+    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
@@ -23,22 +23,26 @@ class AudioMidiDataset(Dataset):
 
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir
+        self.rand=True
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_midis[index][:-3] + 'wav')
-        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
-        
+        midi = pretty_midi.PrettyMIDI(midi_dir + mid)
         midi_seqs = pretty_midi_to_seq_chunks(midi)
+        idxs = np.where(midi_seqs[:,1] != 0)[0] # 0 is EOS TOKEN!, looks at 2nd row, checks for EOS's, thats empty sections
+        if self.rand:
+            idxs = np.random.permutation(idxs)
+        if len(idxs) > MAX_BATCH:
+            idxs = idxs[:MAX_BATCH]
+        midi_seqs = midi_seqs[idxs,:]
 
-        empty_section_idxs = np.where(midi_seqs[1,:] == 0)[0]
-        M_db_clean = np.delete(M_db, empty_section_idxs, axis=1)
-        midi_seqs_clean = np.delete(midi_seqs, empty_section_idxs, axis=1)
-
-        if midi_seqs_clean.shape[1] == 0 or midi_seqs_clean.shape[1] != M_db_clean.shape[1]:
+        if midi_seqs.shape[1] == 0: #or midi_seqs_clean.shape[1] != M_db_clean.shape[1]:
             return None
+        
+        M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_midis[index][:-3] + 'wav', chunks=idxs)
+        
           
-        return torch.tensor(M_db_clean), torch.tensor(midi_seqs_clean) #torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
+        return torch.tensor(M_db), torch.tensor(midi_seqs) #torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
 
     def __getname__(self, index):
         return self.dense_midis[index]
@@ -47,6 +51,7 @@ class AudioMidiDataset(Dataset):
         return len(self.dense_midis)
 
 # FIX COLLATE
+# probably won't need this anymore
 def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should still work
   # data is a list of 2d tensors; concatenate and shuffle all list items
   data = list(filter(lambda x: x is not None, data))
@@ -75,6 +80,27 @@ if __name__ == '__main__':
     midi_dir = './small_matched_data/midi/'
     audio_dir = './small_matched_data/raw_audio/'
     midi_list = os.listdir(midi_dir)
+
+    for mid in midi_list: 
+        midi = pretty_midi.PrettyMIDI(midi_dir + mid)
+        midi_seqs = pretty_midi_to_seq_chunks(midi)
+        print("MIDI SEQ SHAPE:", midi_seqs.shape)
+        input("Continue...")
+        idxs = np.where(midi_seqs[:,1] != 0)[0] # 0 is EOS TOKEN!, looks at 2nd row, checks for EOS's, thats empty sections
+        print("IDXS", idxs)
+        idxs = np.random.permutation(idxs)
+        print("IDXS", idxs)
+        if len(idxs) > MAX_BATCH:
+            idxs = idxs[:MAX_BATCH]
+        print("IDXS", idxs)
+        midi_seqs = midi_seqs[idxs,:]
+        
+        M_db = calc_mel_spec(audio_file = audio_dir + mid[:-3] + 'wav', chunks=idxs)
+
+        print(midi_seqs.shape, M_db.shape)
+        input("Continue...")
+        
+        
 
     dataset = AudioMidiDataset(midi_list, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
     print(dataset.__len__()) # only 25 files rn 

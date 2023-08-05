@@ -116,8 +116,21 @@ def convert_list(midi_stub, file_list, out_stub):
         input("Continue...")
 
 if __name__ == '__main__':
-    #small_midi = './small_matched_data/midi'
-    #small_raw_audio = './small_matched_data/raw_audio'
+    midi_path = './lmd_tracks/'
+    small_raw_audio = './raw_audio/'
+    small_data_list = './data_lists/trainfiles_sma.p'
+
+    small_midi_list =read_list(small_data_list)
+
+    for mid in small_midi_list: 
+        mid_path = midi_path + mid 
+        output_path = small_raw_audio + mid[:-3] + 'wav'
+        print(midi_path, output_path)
+        cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + mid_path + ' -r 16000 -i'
+        ret_status = os.system(cmd)
+    sys.exit(0)
+
+
     #gen_small_dataset(small_midi, small_raw_audio)
     #sys.exit(1)
 

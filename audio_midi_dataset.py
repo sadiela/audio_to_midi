@@ -27,7 +27,7 @@ class AudioMidiDataset(Dataset):
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        midi = pretty_midi.PrettyMIDI(self.midi_file_dir + dense_midis[index])
+        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
         midi_seqs = pretty_midi_to_seq_chunks(midi)
         idxs = np.where(midi_seqs[:,1] != 0)[0] # 0 is EOS TOKEN!, looks at 2nd row, checks for EOS's, thats empty sections
         if self.rand:

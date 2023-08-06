@@ -16,22 +16,6 @@ torch.manual_seed(0)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
-class StreamToLogger(object):
-    """
-    Fake file-like stream object that redirects writes to a logger instance.
-    """
-    def __init__(self, logger, level):
-       self.logger = logger
-       self.level = level
-       self.linebuf = ''
-
-    def write(self, buf):
-        for line in buf.rstrip().splitlines():
-            self.logger.log(self.level, line.rstrip())
-
-    def flush(self):
-        pass
-
 def train_epoch(model, optimizer, loss_fn, train_dataloader):
     model.train()
     losses = 0
@@ -40,21 +24,21 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
     for i, data in enumerate(train_dataloader):
         #try:
         src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size)
-        tgt_input = tgt[:-1, :] # why???
+        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
+        tgt_input = tgt[:,:-1] # slice off EOS token
 
         logits = model(src, tgt_input)
         optimizer.zero_grad()
 
         logits = logits.reshape(-1, logits.shape[-1])
-        tgt_out = tgt[1:, :].reshape(-1)
+        tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
 
         loss = loss_fn(logits, tgt_out)
         loss.backward()
 
         optimizer.step()
         losses += loss.item()
-        if i%100 ==0:
+        if i%1000 ==0:
             logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
             end_time = timer()
             logging.info("Time: %f", (end_time-start_time))
@@ -190,10 +174,11 @@ if __name__ == '__main__':
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
+    logging.getLogger('numba').setLevel(logging.WARNING)
 
-    log = logging.getLogger('train')
-    sys.stdout = StreamToLogger(log,logging.INFO)
-    sys.stderr = StreamToLogger(log,logging.ERROR)
+
+    #sys.stdout = StreamToLogger(log,logging.INFO)
+    #sys.stderr = StreamToLogger(log,logging.ERROR)
 
     # qrsh -l gpus=1 -l gpu_c=6
     # cd /projectnb/textconv/sadiela/midi_generation/scripts
@@ -228,7 +213,6 @@ if __name__ == '__main__':
         train_midi_paths = pickle.load(fp)
     with open(eval_midi_pickle, 'rb') as fp:
         eval_midi_paths = pickle.load(fp)
-    
 
     # save param file again
     transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)

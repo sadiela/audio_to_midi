@@ -7,6 +7,7 @@ import pretty_midi
 import numpy as np
 from spectrograms import *
 from midi_vocabulary import *
+import logging
 
 MAX_BATCH=18
 
@@ -57,6 +58,9 @@ def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should 
   data = list(filter(lambda x: x is not None, data))
   specs = [item[0] for item in data]
   midis = [item[1] for item in data]
+
+  if len(specs) < 1:
+    logging.info("NO DATA: %d", len(specs))
 
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)

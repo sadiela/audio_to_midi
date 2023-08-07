@@ -1,6 +1,0 @@
-INFO:root:training new transformer from scratch
-INFO:root:model size: 61.360MB
-INFO:root:Training transformer model
-INFO:root:TRAINING BATCH SIZE: 1
-INFO:root:ITERATION: 0, LOSS: 6.928262
-INFO:root:Time: 3.374774

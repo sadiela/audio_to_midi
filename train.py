@@ -22,33 +22,36 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        #try:
-        src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-        tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
-        tgt_input = tgt[:,:-1] # slice off EOS token
+        if data is None: 
+            logging.info("NO DATA, passing")
+            pass
+        try:
+            src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
+            tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
+            tgt_input = tgt[:,:-1] # slice off EOS token
 
-        logits = model(src, tgt_input)
-        optimizer.zero_grad()
+            logits = model(src, tgt_input)
+            optimizer.zero_grad()
 
-        logits = logits.reshape(-1, logits.shape[-1])
-        tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
+            logits = logits.reshape(-1, logits.shape[-1])
+            tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
 
-        loss = loss_fn(logits, tgt_out)
-        loss.backward()
+            loss = loss_fn(logits, tgt_out)
+            loss.backward()
 
-        optimizer.step()
-        losses += loss.item()
-        if i%1000 ==0:
-            logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-            end_time = timer()
-            logging.info("Time: %f", (end_time-start_time))
-            start_time = timer()
-        #except RuntimeError as e:
-        #    logging.info("ERROR IN TRAINING LOOP: %s", str(e))
-        #    print("RUNTIME ERROR", e)
-        #except Exception as ex:
-        #    logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
-        #    print("ERROR", ex)
+            optimizer.step()
+            losses += loss.item()
+            if i%1000 ==0:
+                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+                end_time = timer()
+                logging.info("Time: %f", (end_time-start_time))
+                start_time = timer()
+        except RuntimeError as e:
+            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+            print("RUNTIME ERROR", e)
+        except Exception as ex:
+            logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
+            print("ERROR", ex)
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):
@@ -56,10 +59,13 @@ def evaluate(model, loss_fn, eval_dataloader):
     model.eval()
 
     with torch.no_grad(): # do not need to save gradients since we will not be running a backwards pass
-        for src, tgt in eval_dataloader:
+        for i, data in enumerate(eval_dataloader):
+            if data is None: 
+                logging.log("NO DATA, passing")
+                pass
             try: 
-                src = src.to(DEVICE).to(torch.float32)
-                tgt = tgt.to(DEVICE).to(torch.long)
+                src = data[0].to(DEVICE).to(torch.float32)
+                tgt = data[1].to(DEVICE).to(torch.long)
 
                 tgt_input = tgt[:-1, :]
 

@@ -61,7 +61,7 @@ def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should 
   full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
   full_midi_list = torch.cat(midis, 1)
 
-  if collate_shuffle == True:
+  '''if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
       #print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
@@ -70,14 +70,12 @@ def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should 
   if full_spec_list.shape[1] > MAX_BATCH:
       #print("TRIMMING BATCH")
       full_midi_list = full_midi_list[:, :MAX_BATCH]
-      full_spec_list = full_spec_list[:, :MAX_BATCH, :]
-
-  print("FINAL DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1]) 
+      full_spec_list = full_spec_list[:, :MAX_BATCH, :]'''
 
   return full_spec_list, full_midi_list
 
 if __name__ == '__main__':
-    midi_dir = './small_matched_data/midi/'
+    midi_dir = './small_matchaudied_data/midi/'
     audio_dir = './small_matched_data/raw_audio/'
     midi_list = os.listdir(midi_dir)
 

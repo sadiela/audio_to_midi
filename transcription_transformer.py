@@ -10,9 +10,6 @@ EOS_IDX = 0
 PAD_IDX = 1
 BOS_IDX = 2
 
-import os
-import numpy as np
-
 class PositionalEncoding(nn.Module): # probably need to change this!
     def __init__(self, emb_size: int,
                  dropout: float = 0.0,
@@ -72,8 +69,7 @@ class MultiHeadAttentionLayer(nn.Module):
         
         self.scale = torch.sqrt(torch.FloatTensor([self.head_dim])).to(DEVICE)
         
-    def forward(self, query, key, value, mask = None):
-        
+    def forward(self, query, key, value, mask = None):        
         batch_size = query.shape[0]
         
         #query = [batch size, query len, hid dim]
@@ -125,12 +121,12 @@ class MultiHeadAttentionLayer(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout=0.0):
+    def __init__(self, emb_dim, num_heads, d_ff, dropout=0.0):
         super(EncoderLayer, self).__init__()
-        self.self_attn = MultiHeadAttentionLayer(d_model, num_heads)
-        self.feed_forward = FeedForwardWithGEGLU(d_model, d_ff)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
+        self.self_attn = MultiHeadAttentionLayer(emb_dim, num_heads)
+        self.feed_forward = FeedForwardWithGEGLU(emb_dim, d_ff)
+        self.norm1 = nn.LayerNorm(emb_dim)
+        self.norm2 = nn.LayerNorm(emb_dim)
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x): #, mask):
@@ -146,14 +142,14 @@ class EncoderLayer(nn.Module):
         return x
     
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, dropout=0.0):
+    def __init__(self, emb_dim, num_heads, d_ff, dropout=0.0):
         super(DecoderLayer, self).__init__()
-        self.self_attn = MultiHeadAttentionLayer(d_model, num_heads)
-        self.cross_attn = MultiHeadAttentionLayer(d_model, num_heads)
-        self.feed_forward = FeedForwardWithGEGLU(d_model, d_ff)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.norm3 = nn.LayerNorm(d_model)
+        self.self_attn = MultiHeadAttentionLayer(emb_dim, num_heads)
+        self.cross_attn = MultiHeadAttentionLayer(emb_dim, num_heads)
+        self.feed_forward = FeedForwardWithGEGLU(emb_dim, d_ff)
+        self.norm1 = nn.LayerNorm(emb_dim)
+        self.norm2 = nn.LayerNorm(emb_dim)
+        self.norm3 = nn.LayerNorm(emb_dim)
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x, enc_output, tgt_mask):
@@ -209,8 +205,6 @@ class TranscriptionTransformer(nn.Module):
     def forward(self, src, tgt):
         #src = [batch size, src len, embed_dim]
         #trg = [batch size, trg len]
-
-        T = tgt.shape[0] # seq length is first
 
         tgt_mask = self.make_trg_mask(tgt).to(DEVICE) # no padding mask needed for input
 

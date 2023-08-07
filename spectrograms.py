@@ -59,9 +59,9 @@ def calc_mel_spec(audio_file=None, y=None, sr=None, chunks=None):
     M =  librosa.feature.melspectrogram(y=y, sr=sr, 
               hop_length=HOP_WIDTH, n_fft=FFT_SIZE, 
               n_mels=NUM_MEL_BINS, fmin=MEL_LO_HZ, fmax=7600.0)
-    M_transposed = np.transpose(M, (2, 0, 1)) # transpose to be SEQ_LEN x BATCH_SIZE x EMBED_DIM
-    eos_block = LEARNABLE_EOS * np.ones((1, M_transposed.shape[1], NUM_MEL_BINS)) # append EOS TO THE END OF EACH SEQUENCE!
-    M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=0)
+    M_transposed = np.transpose(M, (0,2,1)) # transpose to be BATCH_SIZE x SEQ_LEN x  EMBED_DIM
+    eos_block = LEARNABLE_EOS * np.ones((M_transposed.shape[0], 1, NUM_MEL_BINS)) # append EOS TO THE END OF EACH SEQUENCE!
+    M_transposed = np.append(M_transposed, np.atleast_3d(eos_block), axis=1)
     M_db = librosa.power_to_db(M_transposed, ref=np.max) # logscale magnitudes
     return M_db
 

@@ -22,7 +22,9 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        #try:
+        if data is None: 
+            logging.log("NO DATA, passing")
+            pass
         src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
         tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
         tgt_input = tgt[:,:-1] # slice off EOS token
@@ -56,10 +58,13 @@ def evaluate(model, loss_fn, eval_dataloader):
     model.eval()
 
     with torch.no_grad(): # do not need to save gradients since we will not be running a backwards pass
-        for src, tgt in eval_dataloader:
+        for i, data in enumerate(eval_dataloader):
+            if data is None: 
+                logging.log("NO DATA, passing")
+                pass
             try: 
-                src = src.to(DEVICE).to(torch.float32)
-                tgt = tgt.to(DEVICE).to(torch.long)
+                src = data[0].to(DEVICE).to(torch.float32)
+                tgt = data[1].to(DEVICE).to(torch.long)
 
                 tgt_input = tgt[:-1, :]
 

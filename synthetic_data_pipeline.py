@@ -128,7 +128,7 @@ if __name__ == '__main__':
         print(midi_path, output_path)
         cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + mid_path + ' -r 16000 -i'
         ret_status = os.system(cmd)
-    sys.exit(0)
+    sys.exit()
 
 
     #gen_small_dataset(small_midi, small_raw_audio)

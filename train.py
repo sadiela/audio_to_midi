@@ -10,6 +10,7 @@ import yaml
 import logging
 from tqdm import tqdm
 import sys
+import glob
 
 torch.manual_seed(0)
 
@@ -22,6 +23,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
+        print(i)
         if data is None: 
             logging.info("NO DATA, passing")
             pass
@@ -41,10 +43,17 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
             optimizer.step()
             losses += loss.item()
-            if i%1000 ==0:
+            if i%10000 == 0 and i != 0:
                 logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
                 end_time = timer()
                 logging.info("Time: %f", (end_time-start_time))
+                cur_model_file = get_free_filename('model-' + str(i) + 'iters', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
+                torch.save({
+                            'iters': i,
+                            'model_state_dict': transformer.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            }, cur_model_file) # incremental saves
+                logging.info("Saved model file %s", cur_model_file)
                 start_time = timer()
         except RuntimeError as e:
             logging.info("ERROR IN TRAINING LOOP: %s", str(e))
@@ -84,7 +93,9 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
     # check for previously trained models: 
-    previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
+    #previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
+    previous_models = glob.glob(modeldir + '/*.pt') # * means all if need specific format then *.csv
+    print("PREVIOUS MODELS:", previous_models)
 
     if len(previous_models) == 0:
         logging.info("training new transformer from scratch")
@@ -93,9 +104,9 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
                 nn.init.xavier_uniform_(p) # Why are we using this? 
         optimizer = optim.Adafactor(transformer.parameters(), lr=learning_rate)
     else: 
-        most_recent_model = get_newest_file(previous_models)
+        most_recent_model = max(previous_models, key=os.path.getctime)
         logging.info("loading parameters from most recent model file: %s", most_recent_model)
-        stat_dictionary = torch.load(modeldir + '/' + most_recent_model, map_location=torch.device(DEVICE))
+        stat_dictionary = torch.load(most_recent_model, map_location=torch.device(DEVICE))
         model_params = stat_dictionary["model_state_dict"]
         transformer.load_state_dict(model_params)
         transformer.to(DEVICE) # have to do this before constructing optimizers...
@@ -135,7 +146,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         end_time = timer()
         train_losses.append(train_loss)
         # SAVE INTERMEDIATE MODEL
-        cur_model_file = modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' #get_free_filename('model-'+str(epoch), modeldir, suffix='.pt')
+        cur_model_file = get_free_filename('model-full-epoch', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
         torch.save({
                     'epoch': num_previous_models + epoch,
                     'model_state_dict': transformer.state_dict(),

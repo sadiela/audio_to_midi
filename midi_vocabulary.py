@@ -7,6 +7,7 @@ from timeit import default_timer as timer
 from operator import itemgetter
 import pickle
 from tqdm import tqdm
+import multiprocessing
 
 
 SEG_LENGTH_SECS = 4.0879375
@@ -211,12 +212,37 @@ def midis_to_wavs(midi_path, wav_path=None):
     for m in midis:
         midi_to_wav(midi_path + m, wav_path + m[:-3] + 'wav')
 
+def convert_midis(seq_stub, midi_list, midi_stub): 
+    for mid in midi_list:
+        if not os.path.exists(seq_stub + mid[:-3] + 'npy'):
+            open_midi = pretty_midi.PrettyMIDI(midi_stub + mid)
+            seq_chunks = pretty_midi_to_seq_chunks(open_midi)
+            np.save(seq_stub + mid[:-3] + 'npy', seq_chunks)
+
+def midis_to_seqs_multi(seq_stub, midi_list, midi_stub, num_processes=60): # 60!!!
+    print("LIST LEN:", len(midi_list))
+    # split into chunks:
+    chunk_size = len(midi_list) // num_processes
+    midi_chunks = [midi_list[i:i+chunk_size] for i in range(0, len(midi_list), chunk_size)]
+
+    # create a list of processes
+    print("Starting processes:", len(midi_chunks))
+    processes = []
+    for i in range(num_processes):
+        process = multiprocessing.Process(target=convert_midis, args=(seq_stub,midi_chunks[i], midi_stub))
+        process.start()
+        processes.append(process)
+
+    # wait for all processes to finish
+    for process in processes:
+        process.join()
+
 
 if __name__ == '__main__':
 
-    print("Converting tracks to raw audio")
+    print("Converting MIDIs to seqs")
     midi_stub = './lmd_tracks/'
-    seq_stub = './lmd_seqs/'
+    seq_stub = '/sequences/'
 
     folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'] # '0','1',
 
@@ -224,16 +250,13 @@ if __name__ == '__main__':
     for f in folder_extensions:
         os.makedirs(seq_stub + f, mode=0o777, exist_ok=True)
 
-    with open('./data_lists/densefiles.p', 'rb') as fp:
+    with open('./data_lists/dense_filtered.p', 'rb') as fp:
         dense_midis = pickle.load(fp)
 
     print("NUM MIDS:", len(dense_midis))
+    midis_to_seqs_multi(seq_stub, dense_midis, midi_stub)
 
-    for mid in tqdm(dense_midis):
-        if not os.path.exists(seq_stub + mid[:-3] + 'npy'):
-            open_midi = pretty_midi.PrettyMIDI(midi_stub + mid)
-            seq_chunks = pretty_midi_to_seq_chunks(open_midi)
-            np.save(seq_stub + mid[:-3] + 'npy', seq_chunks)
+    
 
     sys.exit(0)
 

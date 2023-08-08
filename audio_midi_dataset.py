@@ -12,7 +12,7 @@ import logging
 MAX_BATCH=16
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', rand=True):
+    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/' rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
@@ -24,12 +24,13 @@ class AudioMidiDataset(Dataset):
 
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir
+        self.seq_dir = seq_dir
         self.rand=True
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
-        midi_seqs = pretty_midi_to_seq_chunks(midi)
+        midi_seqs = np.load(self.seq_dir + self.dense_midis[index][:-3] + 'npy') #pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
+        #midi_seqs = pretty_midi_to_seq_chunks(midi)
         idxs = np.where(midi_seqs[:,1] != 0)[0] # 0 is EOS TOKEN!, looks at 2nd row, checks for EOS's, thats empty sections
         if self.rand:
             idxs = np.random.permutation(idxs)

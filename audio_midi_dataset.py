@@ -8,11 +8,13 @@ import numpy as np
 from spectrograms import *
 from midi_vocabulary import *
 import logging
+import random
+import time
 
 MAX_BATCH=16
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/' rand=True):
+    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
@@ -21,6 +23,9 @@ class AudioMidiDataset(Dataset):
         #with open(midi_pickle, 'rb') as fp:
         #    dense_midis = pickle.load(fp)
         self.dense_midis = dense_midis
+        random.seed(int(time.time())//10000)
+        self.dense_midis.shuffle()
+
 
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir

@@ -55,7 +55,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
                 logging.info("Saved model file %s", cur_model_file)
                 start_time = timer()
         except RuntimeError as e:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(e))
+            logging.info("RUNTIME ERROR IN TRAINING LOOP: %s", str(e))
             print("RUNTIME ERROR", e)
         except Exception as ex:
             logging.info("ERROR IN TRAINING LOOP: %s", str(ex))

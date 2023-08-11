@@ -24,7 +24,7 @@ class AudioMidiDataset(Dataset):
         #    dense_midis = pickle.load(fp)
         self.dense_midis = dense_midis
         random.seed(int(time.time())//10000)
-        self.dense_midis.shuffle()
+        random.shuffle(self.dense_midis)
 
 
         self.audio_dir = audio_file_dir

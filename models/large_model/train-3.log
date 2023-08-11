@@ -1,0 +1,13 @@
+INFO:root:loading parameters from most recent model file: ./models/large_model/model-30000iters-0.pt
+INFO:root:model size: 205.735MB
+INFO:root:Training transformer model
+INFO:root:TRAINING BATCH SIZE: 1
+INFO:root:ITERATION: 10000, LOSS: 5.762121
+INFO:root:Time: 14442.998419
+INFO:root:Saved model file ./models/large_model/model-10000iters-1.pt
+INFO:root:ITERATION: 20000, LOSS: 5.546260
+INFO:root:Time: 14221.709130
+INFO:root:Saved model file ./models/large_model/model-20000iters-1.pt
+INFO:root:ITERATION: 30000, LOSS: 5.405585
+INFO:root:Time: 13964.597683
+INFO:root:Saved model file ./models/large_model/model-30000iters-1.pt

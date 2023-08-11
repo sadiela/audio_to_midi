@@ -23,7 +23,6 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        print(i)
         if data is None: 
             logging.info("NO DATA, passing")
             pass

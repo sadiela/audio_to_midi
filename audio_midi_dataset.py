@@ -12,7 +12,7 @@ import logging
 MAX_BATCH=18
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/' rand=True):
+    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory

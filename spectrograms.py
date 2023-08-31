@@ -30,7 +30,7 @@ def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1, chunks
       new_sig[0:signal_length] = signal
       signal = new_sig
     frames = signal.reshape(int(len(signal)/segment_length),segment_length)
-    if chunks is not None: 
+    if chunks is not None and max(chunks)<frames.shape[0]: 
         frames = frames[chunks,:]
     return frames
   

@@ -42,7 +42,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
             optimizer.step()
             losses += loss.item()
-            if i%10000 == 0 and i != 0:
+            if i%30000 == 0 and i != 0:
                 logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
                 end_time = timer()
                 logging.info("Time: %f", (end_time-start_time))

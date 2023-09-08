@@ -1,0 +1,13 @@
+INFO:root:training new transformer from scratch
+INFO:root:model size: 205.735MB
+INFO:root:Training transformer model
+INFO:root:TRAINING BATCH SIZE: 1
+INFO:root:ITERATION: 10000, LOSS: 5.771160
+INFO:root:Time: 14610.421612
+INFO:root:Saved model file ./models/large_model/model-10000iters-0.pt
+INFO:root:ITERATION: 20000, LOSS: 5.550981
+INFO:root:Time: 14228.497179
+INFO:root:Saved model file ./models/large_model/model-20000iters-0.pt
+INFO:root:ITERATION: 30000, LOSS: 5.373733
+INFO:root:Time: 14131.257521
+INFO:root:Saved model file ./models/large_model/model-30000iters-0.pt

@@ -256,8 +256,6 @@ if __name__ == '__main__':
     print("NUM MIDS:", len(dense_midis))
     midis_to_seqs_multi(seq_stub, dense_midis, midi_stub, num_processes=1)
 
-    
-
     sys.exit(0)
 
     midi_directory = './small_matched_data/midi/'

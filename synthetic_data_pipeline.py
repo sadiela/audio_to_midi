@@ -1,4 +1,5 @@
 import os
+import time
 import pretty_midi
 from tqdm import tqdm
 #from numpy import ndarray
@@ -73,7 +74,6 @@ def process_midis_to_wavs(midi_files, midi_dir, wav_dir):
     for midi in midi_files: 
         output_path = wav_dir + midi[:-3]+'wav'
         midi_path = midi_dir  + midi
-        #print("MIDI PATH AND OUTPUT PATH:", midi_path, output_path)
         if not os.path.isfile(output_path):
             cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
             ret_status = os.system(cmd)
@@ -108,12 +108,12 @@ def gen_small_dataset(midi_folder, raw_audio_folder):
 def convert_list(midi_stub, file_list, out_stub): 
     for t in file_list:
         midi_path = midi_stub + t 
+        print(midi_path)
         output_path = out_stub + t[:-3] + 'wav'
         print(midi_path)
         if not os.path.isfile(output_path):
             cmd = "fluidsynth -F " + output_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
             ret_status = os.system(cmd)
-        input("Continue...")
 
 if __name__ == '__main__':
     midi_path = './lmd_tracks/'
@@ -157,6 +157,10 @@ if __name__ == '__main__':
     #    os.makedirs(raw_audio_stub + f, mode=0o777, exist_ok=True)
 
     # load 
+    densefiles = read_list('./data_lists/densefiles.p')
+    convert_list(track_stub, densefiles, raw_audio_stub)
+    sys.exit(0)
+
     med_testfiles = read_list('./data_lists/testfiles_med.p')
     med_trainfiles = read_list('./data_lists/trainfiles_med.p')
     

@@ -11,7 +11,7 @@ import logging
 import random
 import time
 
-MAX_BATCH=16
+MAX_BATCH=18
 
 class AudioMidiDataset(Dataset):
     def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/', rand=True):
@@ -80,9 +80,7 @@ def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should 
   if full_spec_list.shape[1] > MAX_BATCH:
       #print("TRIMMING BATCH")
       full_midi_list = full_midi_list[:, :MAX_BATCH]
-      full_spec_list = full_spec_list[:, :MAX_BATCH, :]
-
-  #print("FINAL DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1]) '''
+      full_spec_list = full_spec_list[:, :MAX_BATCH, :]'''
 
   return full_spec_list, full_midi_list
 

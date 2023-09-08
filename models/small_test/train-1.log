@@ -1,3 +1,42 @@
 INFO:root:model size: 205.735MB
 INFO:root:Training transformer model
 INFO:root:TRAINING BATCH SIZE: 2
+INFO:root:ITERATION: 0, LOSS: 7.015346
+INFO:root:Time: 6.777102
+INFO:root:ITERATION: 100, LOSS: 5.613556
+INFO:root:Time: 424.501121
+INFO:root:ITERATION: 200, LOSS: 5.035466
+INFO:root:Time: 401.274964
+INFO:root:ITERATION: 300, LOSS: 4.871552
+INFO:root:Time: 419.341588
+INFO:root:ITERATION: 400, LOSS: 4.824082
+INFO:root:Time: 439.215009
+INFO:root:Finished training epoch 1
+INFO:root:Saved model at epoch 1 to ./models/small_test/model-1.pt
+INFO:root:Epoch: 1, Train loss: 5.512061, Val loss: 5.376609, Epoch time: 3825.518605
+INFO:root:ITERATION: 0, LOSS: 5.739656
+INFO:root:Time: 4.216733
+INFO:root:ITERATION: 100, LOSS: 5.533998
+INFO:root:Time: 386.769596
+INFO:root:ITERATION: 200, LOSS: 5.010380
+INFO:root:Time: 370.199357
+INFO:root:ITERATION: 300, LOSS: 4.778746
+INFO:root:Time: 386.833215
+INFO:root:ITERATION: 400, LOSS: 4.856601
+INFO:root:Time: 400.361925
+INFO:root:Finished training epoch 2
+INFO:root:Saved model at epoch 2 to ./models/small_test/model-2.pt
+INFO:root:Epoch: 2, Train loss: 5.429997, Val loss: 5.358730, Epoch time: 3616.902840
+INFO:root:ITERATION: 0, LOSS: 5.741713
+INFO:root:Time: 4.275736
+INFO:root:ITERATION: 100, LOSS: 5.582561
+INFO:root:Time: 382.409029
+INFO:root:ITERATION: 200, LOSS: 4.972752
+INFO:root:Time: 362.388402
+INFO:root:ITERATION: 300, LOSS: 4.899811
+INFO:root:Time: 383.398591
+INFO:root:ITERATION: 400, LOSS: 5.049131
+INFO:root:Time: 398.287138
+INFO:root:Finished training epoch 3
+INFO:root:Saved model at epoch 3 to ./models/small_test/model-3.pt
+INFO:root:Epoch: 3, Train loss: 5.413019, Val loss: 5.348881, Epoch time: 3597.633218

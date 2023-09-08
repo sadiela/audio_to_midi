@@ -23,7 +23,6 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        print(i)
         if data is None: 
             logging.info("NO DATA, passing")
             pass
@@ -43,7 +42,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
             optimizer.step()
             losses += loss.item()
-            if i%10000 == 0 and i != 0:
+            if i%30000 == 0 and i != 0:
                 logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
                 end_time = timer()
                 logging.info("Time: %f", (end_time-start_time))
@@ -193,11 +192,6 @@ if __name__ == '__main__':
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
     logging.getLogger('numba').setLevel(logging.WARNING)
 
-
-    #sys.stdout = StreamToLogger(log,logging.INFO)
-    #sys.stderr = StreamToLogger(log,logging.ERROR)
-
-    # qrsh -l gpus=1 -l gpu_c=6
     # cd /projectnb/textconv/sadiela/midi_generation/scripts
     # CONTINUED TRAINING
 

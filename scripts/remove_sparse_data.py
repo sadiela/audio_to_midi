@@ -16,7 +16,6 @@ def get_track_lengths(midi_dir, extension, length_dict):
         open_midi = pretty_midi.PrettyMIDI(str(midi_dir / extension / fname))
         length_dict[extension + '/' + fname] = open_midi.get_end_time()
 
-
 def find_sparse_midis(midi_directory, extension, dense_tracks, sparsity_dict, sparsity_cutoff=0.25):
     num_sparse = 0
     file_list = os.listdir(midi_directory / extension)
@@ -75,6 +74,22 @@ def create_datasets(dense_filepath):
         pickle.dump(train_files[:10000], fp)
     
 if __name__ == '__main__':
+    # HOW BIG? 
+    training_p = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/trainfiles_2.p'
+    testing_p = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/testfiles_2.p'
+
+    with open(training_p, 'rb') as fp:
+        train_filelist = pickle.load(fp)
+        print("NUM TRAIN:", len(train_filelist))
+
+
+    with open(testing_p, 'rb') as fp:
+        test_filelist = pickle.load(fp)
+        print("NUM TEST:", len(test_filelist))
+
+
+    sys.exit(0)
+
     print("REMAKE DATASETS")
     create_datasets('./data_lists/dense_filtered.p')
 

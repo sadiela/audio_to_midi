@@ -5,6 +5,7 @@ import sys
 import math
 import random
 import copy 
+import os
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EOS_IDX = 0
 PAD_IDX = 1
@@ -185,22 +186,23 @@ class TranscriptionTransformer(nn.Module):
 
     def make_trg_mask(self, trg):
         #trg = [batch size, trg len]
-        
         trg_pad_mask = (trg != PAD_IDX).unsqueeze(1).unsqueeze(2)
         
         #trg_pad_mask = [batch size, 1, 1, trg len]
-        
         trg_len = trg.shape[1]
         
         trg_sub_mask = torch.tril(torch.ones((trg_len, trg_len), device = DEVICE)).bool()
-        
         #trg_sub_mask = [trg len, trg len]
             
         trg_mask = trg_pad_mask & trg_sub_mask
-        
         #trg_mask = [batch size, 1, trg len, trg len]
         
         return trg_mask
+    
+    def lookahead_mask(self, sz1, sz2): # sz1 always T, sz2 S or T
+        look_ahead_mask = torch.triu(torch.ones(sz1, sz2), diagonal=1)
+        look_ahead_mask[look_ahead_mask.bool()] = -float('inf')
+        return look_ahead_mask
 
     def forward(self, src, tgt):
         #src = [batch size, src len, embed_dim]
@@ -254,7 +256,7 @@ class TranscriptionTransformer(nn.Module):
         for i in range(max_len-1):
             memory = memory.to(DEVICE)
             tgt_padding_mask = (ys == PAD_IDX).to(DEVICE)
-            self_lookahead_mask = (lookahead_mask(ys.size(0),ys.size(0)))#.type(torch.bool)).to(DEVICE)
+            self_lookahead_mask = (self.lookahead_mask(ys.size(0),ys.size(0)))#.type(torch.bool)).to(DEVICE)
             #print(ys.shape, memory.shape, tgt_mask.shape)
             out = self.decode(ys, memory, tgt_padding_mask, self_lookahead_mask) #k.shape[0], bsz * num_heads, head_dim
             out = out.transpose(0, 1)
@@ -277,11 +279,6 @@ class TranscriptionTransformer(nn.Module):
         print("TGT shape:",tgt_tokens.shape)
         input("Continueee...")
         return tgt_tokens
-
-def lookahead_mask(sz1, sz2): # sz1 always T, sz2 S or T
-    look_ahead_mask = torch.triu(torch.ones(sz1, sz2), diagonal=1)
-    look_ahead_mask[look_ahead_mask.bool()] = -float('inf')
-    return look_ahead_mask
 
 
 if __name__ == '__main__':

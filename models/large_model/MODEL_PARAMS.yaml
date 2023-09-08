@@ -1,7 +1,6 @@
 num_enc: 8 # 8
 num_dec: 8 # 8
 num_heads: 4 # 4
-soundfont: "./GeneralUser_GS_v1.471.sf2"
 batch_size: 1 # 128 HOW MANY SONGS TO LOAD
 ffn_hidden: 1024 # 1024
 emb_dim: 512

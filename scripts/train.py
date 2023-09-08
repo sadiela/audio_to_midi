@@ -1,8 +1,6 @@
 import torch 
-#from simple_transformer import *
 from transcription_transformer import *
 from audio_midi_dataset import *
-from utility import *
 from timeit import default_timer as timer
 import torch_optimizer as optim
 import argparse
@@ -11,11 +9,34 @@ import logging
 from tqdm import tqdm
 import sys
 import glob
+from datetime import datetime
+import re
 
 torch.manual_seed(0)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
+
+def get_free_filename(stub, directory, suffix='', date=False):
+    # Create unique file/directory 
+    counter = 0
+    while True:
+        if date:
+            file_candidate = '{}/{}-{}-{}{}'.format(str(directory), stub, datetime.today().strftime('%Y-%m-%d'), counter, suffix)
+        else: 
+            file_candidate = '{}/{}-{}{}'.format(str(directory), stub, counter, suffix)
+        if Path(file_candidate).exists():
+            #print("file exists")
+            counter += 1
+        else:  # No match found
+            print("Counter:", counter)
+            if suffix=='.p':
+                print("will create pickle file")
+            elif suffix:
+                Path(file_candidate).touch()
+            else:
+                Path(file_candidate).mkdir()
+            return file_candidate
 
 def train_epoch(model, optimizer, loss_fn, train_dataloader):
     model.train()
@@ -157,19 +178,6 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch+num_previous_models, train_loss, eval_loss, (end_time-start_time))
     return transformer, train_losses, eval_losses
 
-def transcribe_midi(model, audio_file): 
-    M_db = calc_mel_spec(audio_file=audio_file)
-
-    # translate one chunk at a time    
-    seq_chunks = [[] for _ in range(M_db.shape[1])] 
-    for i in range(M_db.shape[1]):   
-        cur_translation = model.translate(torch.tensor(M_db[:,[i],:]))
-        seq_chunks[i] += (cur_translation.int().tolist())
-
-    # convert sequence chunks to a pretty_midi object
-    pretty_obj = seq_chunks_to_pretty_midi(seq_chunks) # NOT SURE THIS NEEDS TO BE TRANSPOSED OR NOT!!!
-    return pretty_obj
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for training')
     parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
@@ -192,8 +200,6 @@ if __name__ == '__main__':
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
     logging.getLogger('numba').setLevel(logging.WARNING)
 
-    # cd /projectnb/textconv/sadiela/midi_generation/scripts
-    # CONTINUED TRAINING
 
     ### save hyperparameters to YAML file in folder ###
     try: 
@@ -203,18 +209,17 @@ if __name__ == '__main__':
         print(e)
         sys.exit(1)
 
+    # load hyperparameters from MODEL_PARAMS.yaml file
     model_hyperparams['modeldir']=modelsubdir
     n_enc = int(model_hyperparams['num_enc'])
     n_dec = int(model_hyperparams['num_dec'])
     nhead = int(model_hyperparams['num_heads'])
     num_epochs = int(model_hyperparams['num_epochs'])
-    soundfont = model_hyperparams['soundfont']
     batch_size = int(model_hyperparams['batch_size'])
     ffn_hidden = int(model_hyperparams['ffn_hidden'])
     emb_dim = int(model_hyperparams['emb_dim'])
     vocab_size = int(model_hyperparams['vocab_size'])
     learning_rate = float(model_hyperparams['learningrate'])
-    
     midi_dir = model_hyperparams['midi_dir']
     audio_dir = model_hyperparams['audio_dir']
     train_midi_pickle = model_hyperparams['train_paths']
@@ -236,16 +241,6 @@ if __name__ == '__main__':
     results["trainloss"] = train_losses
     results["evalloss"] = eval_losses
 
-    #with open(results_file, 'wb') as fp:
-    #    pickle.dump(results, fp)
     with open(results_file, 'w') as fp:
         yaml.dump(results, fp)
-
-    '''print("TRANSCRIBING MIDI")
-    midi_data = transcribe_midi(transformer, './small_matched_data/raw_audio/23ae70e204549444ec91c9ee77c3523a_6.wav')
-    print("PLOTTING MIDI")
-    img = custom_plot_pianoroll(midi_data)'''
-
-    #transformer = Seq2SeqTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
-    #transformer.load_state_dict(torch.load(MODEL_DIR + '/model1.pt'))
-    #transformer.to(DEVICE).eval()
+    print("SAVED RESULTS")

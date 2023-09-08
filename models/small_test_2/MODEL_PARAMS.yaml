@@ -1,7 +1,6 @@
 num_enc: 2 # 8
 num_dec: 2 # 8
 num_heads: 4 # 4
-soundfont: "./GeneralUser_GS_v1.471.sf2"
 batch_size: 1 # 128 HOW MANY SONGS TO LOAD
 ffn_hidden: 1024 # 1024
 emb_dim: 512
@@ -9,11 +8,6 @@ vocab_size: 631
 learningrate: .001
 num_epochs: 10 
 midi_dir: './lmd_tracks/'
-<<<<<<< HEAD
-audio_dir:  './raw_audio/'
-seq_dir: './lmd_seqs/'
-=======
 audio_dir:  '/raw_audio/'
->>>>>>> ecc051b91e795896c510c92059af3e229d64d7d9
 train_paths: './data_lists/trainfiles_sma.p'
 eval_paths: './data_lists/testfiles_sma.p'

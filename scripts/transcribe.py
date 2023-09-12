@@ -42,7 +42,7 @@ def transcribe_wav(model, audio_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for training')
     parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
-    parser.add_argument('-w' '--wav', help="directory with files you want to transcribe", required=True)
+    parser.add_argument('-w', '--wav', help="directory with files you want to transcribe", required=True)
     parser.add_argument('-n', '--mname', help="filename for model you want to use", required=True)
 
     args = vars(parser.parse_args())
@@ -54,6 +54,7 @@ if __name__ == '__main__':
     ### create directory for models and results ###
     modeldir = MODEL_DIR + modelsubdir
     if not os.path.isdir(modeldir):
+        print("NO MODEL DIR")
         sys.exit(1)
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     transcription_folder = modeldir + '/transcriptions/'
@@ -63,6 +64,7 @@ if __name__ == '__main__':
         with open(str(param_file)) as file: 
             mod_hyper = yaml.load(file, Loader=yaml.FullLoader)
     except Exception as e: 
+        print("COULDNT LOAD HYPERPARAMS")
         print(e)
         sys.exit(1)
 
@@ -71,9 +73,13 @@ if __name__ == '__main__':
                                         int(mod_hyper['emb_dim']), int(mod_hyper['num_heads']),
                                         int(mod_hyper['vocab_size']),int(mod_hyper['ffn_hidden']))
     
+    print("instantiated transformer")
+    
     state_dictionary = torch.load(modelpath, map_location=torch.device(DEVICE))
     model_params = state_dictionary["model_state_dict"]
     transformer.load_state_dict(model_params)
     transformer.to(DEVICE) # have to do this before constructing optimizers...
+
+    print("loaded parameters")
 
     transcribe_wavs(transformer, wavdir, transcription_folder)

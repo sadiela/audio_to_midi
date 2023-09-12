@@ -11,7 +11,7 @@ import logging
 import random
 import time
 
-MAX_BATCH=18
+MAX_BATCH=16
 
 class AudioMidiDataset(Dataset):
     def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/', rand=True):
@@ -25,7 +25,6 @@ class AudioMidiDataset(Dataset):
         self.dense_midis = dense_midis
         random.seed(int(time.time())//10000)
         random.shuffle(self.dense_midis)
-
 
         self.audio_dir = audio_file_dir
         self.midi_dir = midi_file_dir

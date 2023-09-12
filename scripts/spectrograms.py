@@ -13,15 +13,14 @@ NUM_MEL_BINS = 512 # input depth
 FFT_SIZE = 2048
 MEL_LO_HZ = 20.0
 FRAMES_PER_SECOND = SAMPLE_RATE / HOP_WIDTH
-LEARNABLE_EOS = np.random.rand(1,NUM_MEL_BINS)
+LEARNABLE_EOS = np.random.rand(1,NUM_MEL_BINS) # FIX
 
-def num_samples(desired_length_in_seconds, sr): 
+'''def num_samples(desired_length_in_seconds, sr): 
    # if you want 3 second chunks, how many samples do you need
-   return 1/sr * desired_length_in_seconds
+   return 1/sr * desired_length_in_seconds'''
 
 def split_audio(signal, segment_length=SEG_LENGTH, pad_end=True, axis=-1, chunks=None):
     """ Split audio into frames """
-    #print(signal.shape)
     signal_length = signal.shape[0]
     num_frames = signal_length // segment_length 
     rest_samples = signal_length % segment_length

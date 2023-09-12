@@ -10,8 +10,8 @@ def midi_to_wav(midi_path,wav_path):
         sys.exit(ret_status)
 
 def midis_to_wavs(midi_dir, wav_dir=None, midi_files=None): # can provide list, don't need to, same with wav_dir
-    if wav_path is None: 
-        wav_path = midi_path
+    if wav_dir is None: 
+        wav_dir = midi_dir
     if midi_files is None: 
         midi_files = [midi for midi in os.listdir(midi_dir) if midi[-3:]=="mid"]
     for midi in midi_files: 
@@ -21,5 +21,4 @@ def midis_to_wavs(midi_dir, wav_dir=None, midi_files=None): # can provide list, 
             midi_to_wav(midi_path, output_path)
 
 
-if __name__ == '__main__':
-    print("main")
+#if __name__ == '__main__':

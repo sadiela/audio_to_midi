@@ -99,7 +99,6 @@ def evaluate(model, loss_fn, eval_dataloader):
 
 def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate):
     transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
-    #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
     # check for previously trained models: 
     #previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]

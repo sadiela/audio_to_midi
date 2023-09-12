@@ -5,9 +5,9 @@ This project is an attempt to improve on the results obtained by Hawthorne et al
 We plan to improve the model by pretraining it on a large synthetic dataset of paired raw audio and midi files (using a variety of synthetic instrument sounds) and fine-tuning it later for more specific tasks (e.g., piano transcription with the MAESTRO dataset). 
 
 ## To Do: 
-- [ ]  Design MIDI to raw audio pipeline using FluidSynth
-- [ ]  Implement T5-like model in pytorch
-- [ ]  Figure out I/O (spectrograms and MIDI-event output)
+- [x]  Design MIDI to raw audio pipeline using FluidSynth
+- [x]  Implement T5-like model in pytorch
+- [x]  Figure out I/O (spectrograms and MIDI-event output)
 
 ## Synthetic Data Generation: MIDI to Raw Audio with FluidSynth
 To generate a large dataset of aligned MIDI and raw audio, we can synthesize MIDI from the Lakh MIDI Dataset [2] using FluidSynth.
@@ -38,22 +38,23 @@ To generate a large dataset of aligned MIDI and raw audio, we can synthesize MID
 - 8 layers each in the encoder and decoder
 - Used float32 activations for better training stability
 
+
 [1] @article{hawthorne2021sequence,
   title={Sequence-to-sequence piano transcription with transformers},
   author={Hawthorne, Curtis and Simon, Ian and Swavely, Rigel and Manilow, Ethan and Engel, Jesse},
   journal={arXiv preprint arXiv:2107.09142},
   year={2021}}
+
 [2] @book{lakh,
   title={Learning-based methods for comparing sequences, with applications to audio-to-midi alignment and matching},
   author={Raffel, Colin},
   year={2016},
-  publisher={Columbia University}
-}
+  publisher={Columbia University}}
+
 [3] @inproceedings{
   maestrodataset,
   title={Enabling Factorized Piano Music Modeling and Generation with the {MAESTRO} Dataset},
   author={Curtis Hawthorne and Andriy Stasyuk and Adam Roberts and Ian Simon and Cheng-Zhi Anna Huang and Sander Dieleman and Erich Elsen and Jesse Engel and Douglas Eck},
   booktitle={International Conference on Learning Representations},
   year={2019},
-  url={https://openreview.net/forum?id=r1lYRjC9F7},
-}
+  url={https://openreview.net/forum?id=r1lYRjC9F7},}

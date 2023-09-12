@@ -1,7 +1,6 @@
 import torch
 import yaml
 import argparse
-import logging
 
 from spectrograms import *
 from midi_vocabulary import *

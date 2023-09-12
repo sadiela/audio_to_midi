@@ -120,7 +120,6 @@ class MultiHeadAttentionLayer(nn.Module):
         #x = [batch size, query len, hid dim]
         return x, attention
 
-
 class EncoderLayer(nn.Module):
     def __init__(self, emb_dim, num_heads, d_ff, dropout=0.0):
         super(EncoderLayer, self).__init__()
@@ -279,65 +278,3 @@ class TranscriptionTransformer(nn.Module):
         print("TGT shape:",tgt_tokens.shape)
         input("Continueee...")
         return tgt_tokens
-
-
-if __name__ == '__main__':
-    audio_dir = './small_matched_data/spectrograms/'
-    seq_dir = './small_matched_data/sequences/'
-
-    seqs = os.listdir(seq_dir)
-    transformer = TranscriptionTransformer(n_enc=2, n_dec=2, emb_dim=512, nhead=2, vocab_size=631, ffn_hidden=512)
-
-    #training_data = AudioMidiDataset(audio_file_dir=audio_dir, midi_file_dir=midi_dir)
-    #train_dataloader = DataLoader(training_data, batch_size=1, collate_fn=collate_fn)
-    multihead_builtin = nn.MultiheadAttention(512, 2, batch_first=True)
-    multihead_imp = MultiHeadAttentionLayer(n_heads=2, hid_dim=512)
-
-    #logging.log("HOW MUCH DATA: %d", len(train_dataloader))
-    for i, seq_name in enumerate(seqs):
-        #print(seq_name)
-        sequence = np.load(seq_dir + seq_name)
-        spec = torch.tensor(np.load(audio_dir + seq_name))
-        
-        #print(sequence.shape, spec.shape)
-        sequence = torch.tensor(sequence.astype('int16'))
-        sequence = sequence.to(DEVICE).to(torch.long) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-        spec = spec.to(DEVICE).to(torch.float32)  # 1024 x 16 (seq_len x batch_size)
-        sequence = sequence[:-1, :].T # why???
-
-        spec = torch.permute(spec,(1,0,2))
-        #print("NEW SHAPE:", spec.shape)
-
-        #print("TRANSFORM")
-        logits = transformer(spec, sequence)
-
-        print("OUTPUT SHAPE", logits.shape)
-        input("Continue...")
-
-
-    sys.exit()
-    B=5 # batch size
-    V=100
-    N,E,S,T = 5,16,10,20 # E embedding dim, S max source sequence length, T max target sequence length
-    nhead=2
-    attn = nn.MultiheadAttention(embed_dim=E, num_heads=nhead)
-    emb = nn.Embedding(num_embeddings=V,embedding_dim=E,padding_idx=0) # V is vocab size
-    seq = torch.LongTensor([[random.randint(1,V-1) for _ in range(S)] for _ in range(N)]) # s is max sequence length
-    for b in range(N):
-        seq[b][random.randint(S//5, S-5):] = 0 # PADDING AT THE END
-    print(seq)
-    print(seq.shape)
-
-    seq_padding_mask = (seq == 0).to(DEVICE) #.transpose(0, 1).to(DEVICE)
-    print(seq_padding_mask)
-
-    tgt_len = T
-    src_len = S
-    look_ahead_mask = torch.triu(torch.ones(tgt_len, tgt_len), diagonal=1)
-    look_ahead_mask[look_ahead_mask.bool()] = -float('inf')
-    print(look_ahead_mask.shape, look_ahead_mask) # TxS
-
-    mask = (torch.triu(torch.ones((tgt_len, tgt_len), device=DEVICE)) == 1).transpose(0, 1)
-    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-    print(mask.shape, mask)
-    print(look_ahead_mask==mask)

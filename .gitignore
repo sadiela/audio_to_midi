@@ -10,3 +10,5 @@ results
 *.p
 lmd_seqs/
 *.zip
+*.ipynb
+scc_audio/

@@ -17,14 +17,14 @@ torch.manual_seed(0)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
-def get_free_filename(stub, directory, suffix='', date=False):
+def get_free_filename(stub, dir, suffix='', date=False):
     # Create unique file/directory 
     counter = 0
     while True:
         if date:
-            file_candidate = '{}/{}-{}-{}{}'.format(str(directory), stub, datetime.today().strftime('%Y-%m-%d'), counter, suffix)
+            file_candidate = '{}/{}-{}-{}{}'.format(str(dir), stub, datetime.today().strftime('%Y-%m-%d'), counter, suffix)
         else: 
-            file_candidate = '{}/{}-{}{}'.format(str(directory), stub, counter, suffix)
+            file_candidate = '{}/{}-{}{}'.format(str(dir), stub, counter, suffix)
         if Path(file_candidate).exists():
             #print("file exists")
             counter += 1
@@ -38,20 +38,15 @@ def get_free_filename(stub, directory, suffix='', date=False):
                 Path(file_candidate).mkdir()
             return file_candidate
 
-def train_epoch(model, optimizer, loss_fn, train_dataloader):
+def train_epoch(model, optimizer, loss_fn, train_dataloader, modeldir):
     model.train()
     losses = 0
-
     start_time = timer()
     for i, data in enumerate(train_dataloader):
-        if data is None: 
-            logging.info("NO DATA, passing")
-            pass
-        try:
+        if data is not None: 
             src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
             tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
             tgt_input = tgt[:,:-1] # slice off EOS token
-
             logits = model(src, tgt_input)
             optimizer.zero_grad()
 
@@ -63,11 +58,11 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
 
             optimizer.step()
             losses += loss.item()
-            if i%30000 == 0 and i != 0:
+            if i%10000 == 0 and i != 0:
                 logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
                 end_time = timer()
                 logging.info("Time: %f", (end_time-start_time))
-                cur_model_file = get_free_filename('model-' + str(i) + 'iters', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
+                cur_model_file = get_free_filename('model-', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
                 torch.save({
                             'iters': i,
                             'model_state_dict': transformer.state_dict(),
@@ -75,12 +70,6 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader):
                             }, cur_model_file) # incremental saves
                 logging.info("Saved model file %s", cur_model_file)
                 start_time = timer()
-        except RuntimeError as e:
-            logging.info("RUNTIME ERROR IN TRAINING LOOP: %s", str(e))
-            print("RUNTIME ERROR", e)
-        except Exception as ex:
-            logging.info("ERROR IN TRAINING LOOP: %s", str(ex))
-            print("ERROR", ex)
     return losses / len(list(train_dataloader))
 
 def evaluate(model, loss_fn, eval_dataloader):
@@ -108,7 +97,7 @@ def evaluate(model, loss_fn, eval_dataloader):
 
     return losses / len(list(eval_dataloader))
 
-def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs):
+def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate):
     transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
     #optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
@@ -143,7 +132,7 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
     print('model size: {:.3f}MB'.format(size_all_mb))
     logging.info('model size: {:.3f}MB'.format(size_all_mb))
 
-    return transformer, optimizer, (num_epochs - len(previous_models))
+    return transformer, optimizer
 
 def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
     transformer.to(DEVICE)
@@ -198,8 +187,6 @@ if __name__ == '__main__':
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
-    logging.getLogger('numba').setLevel(logging.WARNING)
-
 
     ### save hyperparameters to YAML file in folder ###
     try: 
@@ -231,7 +218,7 @@ if __name__ == '__main__':
         eval_midi_paths = pickle.load(fp)
 
     # save param file again
-    transformer, optimizer, num_epochs = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
+    transformer, optimizer = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)

@@ -8,11 +8,11 @@ from operator import itemgetter
 import pickle
 from tqdm import tqdm
 import multiprocessing
+from midi_utility import *
 
 
 SEG_LENGTH_SECS = 4.0879375
 BIN_QUANTIZATION = 0.01 # should only need 500 time events
-SOUNDFONT_PATH = "./GeneralUser_GS_v1.471.sf2"
 MAX_LENGTH=1024
 
 event_dictionary = {}
@@ -164,12 +164,12 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
     #print(list(array_seqs[:,0]))
     return array_seqs
 
-def pretty_midi_to_seq_chunks(open_midi): 
-    num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1
+def pretty_midi_to_seq_chunks(midi_obj): 
+    num_segs = int((midi_obj.get_end_time() // SEG_LENGTH_SECS)) + 1
     event_sequences = [[2] for _ in range(num_segs)] # Start with BOS TOKEN
     cur_seg = 0
     previous_note_time = 0.0
-    for note in open_midi.instruments[0].notes:
+    for note in midi_obj.instruments[0].notes:
         if note.start > SEG_LENGTH_SECS*(cur_seg+1):
             #print("STARTING NEW SEGMENT")
             cur_seg = int((note.start // SEG_LENGTH_SECS))
@@ -197,20 +197,6 @@ def pretty_midi_to_seq_chunks(open_midi):
     array_seqs = array_seqs.astype('int16')
     return array_seqs
 
-def midi_to_wav(midi_path,wav_path):
-    print("CONVERTING")
-    # using the default sound font in 44100 Hz sample rate
-    #cmd = "fluidsynth -F " + wav_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-    cmd = "fluidsynth -F " + wav_path + ' ' + SOUNDFONT_PATH + ' ' + midi_path + ' -r 16000 -i'
-    print(cmd)
-    ret_status = os.system(cmd)
-
-def midis_to_wavs(midi_path, wav_path=None):
-    if wav_path is None: 
-        wav_path = midi_path
-    midis = [f for f in os.listdir(midi_path) if f[-3:]=='mid']
-    for m in midis:
-        midi_to_wav(midi_path + m, wav_path + m[:-3] + 'wav')
 
 def convert_midis(seq_stub, midi_list, midi_stub): 
     for mid in midi_list:
@@ -280,8 +266,6 @@ if __name__ == '__main__':
         #seq_chunks_to_pretty_midi(seq_chunks, target_dir)
         #midi_to_wav(target_dir + 'seq_conversion1.mid', target_dir + 'seq_conv1.wav')
     #end_time = timer()
-
-    midis_to_wavs(noteoff_dir)
 
     sys.exit(0)
 

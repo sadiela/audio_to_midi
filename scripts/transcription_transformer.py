@@ -246,10 +246,10 @@ class TranscriptionTransformer(nn.Module):
         output = self.generator(dec_output)
         return output
     
-    def greedy_decode(self, src, src_mask, max_len, start_symbol):
+    def greedy_decode(self, src, max_len, start_symbol):
         src = src.to(DEVICE).to(torch.float32)
-        src_mask = src_mask.to(DEVICE)
-        memory = self.encode(src, src_mask)
+        #src_mask = src_mask.to(DEVICE) # No mask because no padding...
+        memory = self.encode(src)
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
         #print("ys:", ys.shape, ys)
         for i in range(max_len-1):
@@ -272,9 +272,9 @@ class TranscriptionTransformer(nn.Module):
     def translate(self, src):
         self.eval()
         num_tokens = src.shape[0]
-        src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
+        #src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
         tgt_tokens = self.greedy_decode(
-            src, src_mask, max_len=1024, start_symbol=BOS_IDX).flatten()
+            src, max_len=1024, start_symbol=BOS_IDX).flatten()
         print("TGT shape:",tgt_tokens.shape)
         input("Continueee...")
         return tgt_tokens

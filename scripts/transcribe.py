@@ -7,7 +7,7 @@ from midi_vocabulary import *
 from transcription_transformer import TranscriptionTransformer
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_DIR = './models/'
+MODEL_DIR = '../models/'
 
 def transcribe_wavs(transformer, wavdir, transcription_folder, plot=True):
     wav_files = [wav for wav in os.listdir(wavdir) if wav[-3:]=='wav']
@@ -42,14 +42,15 @@ def transcribe_wav(model, audio_file):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for training')
     parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
-    parser.add_argument('-w' '--wavdir', help="directory with files you want to transcribe", required=True)
-    parser.add_argument('-n', '--modelname', help="filename for model you want to use", required=True)
+    parser.add_argument('-w' '--wav', help="directory with files you want to transcribe", required=True)
+    parser.add_argument('-n', '--mname', help="filename for model you want to use", required=True)
 
     args = vars(parser.parse_args())
+    print(args)
 
     modelsubdir = args['modeldir']
-    wavdir = args['wavdir']
-    modelname = args['modelname']
+    wavdir = args['wav']
+    modelname = args['mname']
     ### create directory for models and results ###
     modeldir = MODEL_DIR + modelsubdir
     if not os.path.isdir(modeldir):

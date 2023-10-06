@@ -17,6 +17,10 @@ torch.manual_seed(0)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = './models/'
 
+def categorical_cross_entropy(y_pred, y_true):
+    y_pred = torch.clamp(y_pred, 1e-9, 1 - 1e-9)
+    return -(y_true * torch.log(y_pred)).sum(dim=1).mean()  
+
 def get_free_filename(stub, dir, suffix='', date=False):
     # Create unique file/directory 
     counter = 0
@@ -38,7 +42,7 @@ def get_free_filename(stub, dir, suffix='', date=False):
                 Path(file_candidate).mkdir()
             return file_candidate
 
-def train_epoch(model, optimizer, loss_fn, train_dataloader, modeldir):
+def train_epoch(model, optimizer, train_dataloader, modeldir):
     model.train()
     losses = 0
     start_time = timer()
@@ -53,7 +57,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader, modeldir):
             logits = logits.reshape(-1, logits.shape[-1])
             tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
 
-            loss = loss_fn(logits, tgt_out)
+            loss = categorical_cross_entropy(logits, tgt_out)
             loss.backward()
 
             optimizer.step()
@@ -72,7 +76,7 @@ def train_epoch(model, optimizer, loss_fn, train_dataloader, modeldir):
                 start_time = timer()
     return losses / len(list(train_dataloader))
 
-def evaluate(model, loss_fn, eval_dataloader):
+def evaluate(model, eval_dataloader):
     losses = 0
     model.eval()
 
@@ -90,7 +94,7 @@ def evaluate(model, loss_fn, eval_dataloader):
                 logits = model(src, tgt_input)
 
                 tgt_out = tgt[1:, :]
-                loss = loss_fn(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+                loss = categorical_cross_entropy(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
                 losses += loss.item()
             except Exception as e:
                 logging.info("ERROR: %s", str(e))
@@ -137,7 +141,6 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
     transformer.to(DEVICE)
     train_losses = []
     eval_losses = []
-    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     num_previous_models = len([f for f in os.listdir(modeldir) if f[-2:] == 'pt' ])
     
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
@@ -149,7 +152,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
 
     for epoch in range(1, n_epoch+1):
         start_time = timer()
-        train_loss = train_epoch(transformer, optimizer, loss_fn, train_dataloader)
+        train_loss = train_epoch(transformer, optimizer, train_dataloader)
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         train_losses.append(train_loss)
@@ -161,7 +164,7 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
                     'optimizer_state_dict': optimizer.state_dict(),
                     }, cur_model_file) # incremental saves
         logging.info("Saved model at epoch %d to %s", num_previous_models + epoch, cur_model_file)
-        eval_loss = evaluate(transformer, loss_fn, eval_dataloader)
+        eval_loss = evaluate(transformer, eval_dataloader)
         eval_losses.append(eval_loss)
         logging.info("Epoch: %d, Train loss: %f, Val loss: %f, Epoch time: %f", epoch+num_previous_models, train_loss, eval_loss, (end_time-start_time))
     return transformer, train_losses, eval_losses

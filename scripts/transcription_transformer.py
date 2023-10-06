@@ -197,11 +197,6 @@ class TranscriptionTransformer(nn.Module):
         #trg_mask = [batch size, 1, trg len, trg len]
         
         return trg_mask
-    
-    def lookahead_mask(self, sz1, sz2): # sz1 always T, sz2 S or T
-        look_ahead_mask = torch.triu(torch.ones(sz1, sz2), diagonal=1)
-        look_ahead_mask[look_ahead_mask.bool()] = -float('inf')
-        return look_ahead_mask
 
     def forward(self, src, tgt):
         #src = [batch size, src len, embed_dim]
@@ -236,45 +231,51 @@ class TranscriptionTransformer(nn.Module):
         for enc_layer in self.encoder_layers:
             enc_output = enc_layer(enc_output) #, src_mask)
     
-    def decode(self, tgt, enc_output, tgt_padding_mask, self_lookahead_mask):
+        return enc_output
+    
+    def decode(self, tgt, enc_output, trg_mask): #, tgt_padding_mask, self_lookahead_mask):
         tgt_embedded = self.positional_encoding(self.tgt_emb(tgt))
         
         dec_output = tgt_embedded
         for dec_layer in self.decoder_layers:
-            dec_output = dec_layer(dec_output, enc_output, tgt_padding_mask, self_lookahead_mask)
+            dec_output = dec_layer(dec_output, enc_output, trg_mask) # takes 4 args, 5 given
         
-        output = self.generator(dec_output)
-        return output
+        #output = self.generator(dec_output)
+        print(dec_output.shape, dec_output[:,-1].shape)
+        last_output = self.generator(dec_output[:, -1])
+
+        #out = out.transpose(0, 1)
+        #print("OUTPUT SHAPE:", out.shape)
+        #prob =  # last word?
+        
+        return last_output #output
     
     def greedy_decode(self, src, max_len, start_symbol):
         src = src.to(DEVICE).to(torch.float32)
-        #src_mask = src_mask.to(DEVICE) # No mask because no padding...
         memory = self.encode(src)
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
         #print("ys:", ys.shape, ys)
         for i in range(max_len-1):
             memory = memory.to(DEVICE)
-            tgt_padding_mask = (ys == PAD_IDX).to(DEVICE)
-            self_lookahead_mask = (self.lookahead_mask(ys.size(0),ys.size(0)))#.type(torch.bool)).to(DEVICE)
+            tgt_mask = self.make_trg_mask(ys)
+            #tgt_padding_mask = (ys == PAD_IDX).to(DEVICE)
+            #self_lookahead_mask = (self.lookahead_mask(ys.size(0),ys.size(0)))#.type(torch.bool)).to(DEVICE)
             #print(ys.shape, memory.shape, tgt_mask.shape)
-            out = self.decode(ys, memory, tgt_padding_mask, self_lookahead_mask) #k.shape[0], bsz * num_heads, head_dim
-            out = out.transpose(0, 1)
-            prob = self.generator(out[:, -1])
-            _, next_word = torch.max(prob, dim=1)
+            prob = self.decode(ys, memory, tgt_mask) #, tgt_padding_mask, self_lookahead_mask) #k.shape[0], bsz * num_heads, head_dim
+            _, next_word = torch.max(prob, axis=1)
             next_word = next_word.item()
 
             ys = torch.cat([ys,
                             torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
             if next_word == EOS_IDX:
                 break
+
+            print(ys)
         return ys
     
     def translate(self, src):
         self.eval()
-        num_tokens = src.shape[0]
         #src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
         tgt_tokens = self.greedy_decode(
             src, max_len=1024, start_symbol=BOS_IDX).flatten()
-        print("TGT shape:",tgt_tokens.shape)
-        input("Continueee...")
         return tgt_tokens

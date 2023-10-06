@@ -5,14 +5,15 @@ import argparse
 from spectrograms import *
 from midi_vocabulary import *
 from transcription_transformer import TranscriptionTransformer
+from midi_utility import *
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = '../models/'
 
-def transcribe_wavs(transformer, wavdir, transcription_folder, plot=True):
+def transcribe_wavs(transformer, wavdir, transcription_folder, plot=False, synth=True):
+    transformer.eval()
     wav_files = [wav for wav in os.listdir(wavdir) if wav[-3:]=='wav']
     for wav in wav_files: 
-        print("TRANSCRIBING TO MIDI", wav)
         midi_data = transcribe_wav(transformer, wavdir + wav) # this is a pretty_midi
         midi_data.write(transcription_folder + wav[:-3] + 'mid')
 
@@ -25,14 +26,16 @@ def transcribe_wavs(transformer, wavdir, transcription_folder, plot=True):
             plt.clf()
             plt.close()
 
+        if synth:
+            midi_to_wav(transcription_folder + wav[:-3] + 'mid',transcription_folder + wav[:-3] + 'wav')
+
 def transcribe_wav(model, audio_file): 
-    model.eval()
     M_db = calc_mel_spec(audio_file=audio_file) # get spectrogram....will be all chunks in order
 
     # translate one chunk at a time    
-    seq_chunks = [[] for _ in range(M_db.shape[1])] 
-    for i in range(M_db.shape[1]):   
-        cur_translation = model.translate(torch.tensor(M_db[:,[i],:]))
+    seq_chunks = [[] for _ in range(M_db.shape[0])] 
+    for i in range(M_db.shape[0]):   
+        cur_translation = model.translate(torch.tensor(M_db[[i],:,:]))
         seq_chunks[i] += (cur_translation.int().tolist())
 
     # convert sequence chunks to a pretty_midi object
@@ -57,9 +60,10 @@ if __name__ == '__main__':
         print("NO MODEL DIR")
         sys.exit(1)
     param_file = modeldir + "/MODEL_PARAMS.yaml"
-    transcription_folder = modeldir + '/transcriptions/'
+    transcription_folder = modeldir + 'transcriptions/'
+    os.makedirs(transcription_folder, mode=0o777, exist_ok=True)
     modelpath = modeldir + modelname
-    
+
     try: 
         with open(str(param_file)) as file: 
             mod_hyper = yaml.load(file, Loader=yaml.FullLoader)

@@ -20,7 +20,7 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-    event_dictionary[i] = 'NOTE:' + str(i-3)
+    event_dictionary[i] = 'NOTE_START:' + str(i-3)
 
 for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
@@ -86,8 +86,8 @@ def custom_plot_pianoroll(
 def seq_chunks_to_pretty_midi(seq_chunks):
     cur_midi = pretty_midi.PrettyMIDI() # define new midi object WITH PROPER TEMPO!!!
     cur_inst = pretty_midi.Instrument(program=1)
-    print(seq_chunks.shape)
-    seq_chunks = seq_chunks.T
+    print(len(seq_chunks), seq_chunks[0])
+    #seq_chunks = seq_chunks.T
     for i, chunk in enumerate(seq_chunks):
         base_time = SEG_LENGTH_SECS*i # whatever chunk we are at
         cur_time = base_time
@@ -139,8 +139,8 @@ def seq_chunks_w_noteoff_to_prettymidi(seq_chunks):
     return cur_midi
 
 def pretty_midi_to_seq_chunks_w_noteoff(open_midi): 
-    note_starts = [(note.pitch,note.start) for note in open_midi.instruments[0].notes]
-    note_ends = [(note.pitch,note.end) for note in open_midi.instruments[0].notes]
+    note_starts = [(note.pitch,note.start, "START") for note in open_midi.instruments[0].notes]
+    note_ends = [(note.pitch,note.end, "END") for note in open_midi.instruments[0].notes]
     all_note_tuples = note_starts + note_ends
     all_note_tuples = sorted(all_note_tuples,key=itemgetter(1))
     num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1

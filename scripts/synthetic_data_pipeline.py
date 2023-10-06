@@ -140,7 +140,7 @@ def midis_to_wavs_multi(midi_list, midi_dir, wav_dir=None, num_processes=4): # 6
         process.join()
 
 if __name__ == '__main__':
-    data_list_path = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/chunked_datalists/trainfiles_0.p'
+    data_list_path = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/chunked_datalists/trainfiles_3.p'
     midi_dir = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/lmd_tracks/'
     raw_audio_dir = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/scc_audio/'
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         os.makedirs(raw_audio_dir + f, mode=0o777, exist_ok=True)'''
 
     # you can use more than 4 processes depending on how many cores your computer has
-    midis_to_wavs_multi(data_list,midi_dir=midi_dir, wav_dir=raw_audio_dir, num_processes=4)
+    midis_to_wavs_multi(data_list,midi_dir=midi_dir, wav_dir=raw_audio_dir, num_processes=6)
 
     # These should match... for whatever subdir you are looking at
-    print("LIST LEN:", len(data_list), "CONVERTED FILES:", len(os.listdir(raw_audio_dir+'0')))
+    print("LIST LEN:", len(data_list), "CONVERTED FILES:", len(os.listdir(raw_audio_dir+'3')))

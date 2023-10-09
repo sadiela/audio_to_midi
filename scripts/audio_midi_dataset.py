@@ -14,8 +14,9 @@ import time
 MAX_BATCH=16
 VOCAB_SIZE = 631
 
+# CHANGE RAW AUDIO DIR
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='../../raw_audio/', midi_file_dir='../lmd_tracks/', seq_dir='../lmd_seqs/', rand=True):
+    def __init__(self, dense_midis, audio_file_dir='../raw_audio/', midi_file_dir='../lmd_tracks/', seq_dir='../lmd_seqs/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
@@ -67,19 +68,22 @@ def collate_fn(data, batch_size=1, collate_shuffle=True): # I think this should 
   if len(specs) < 1:
     logging.info("NO DATA: %d", len(specs))
 
-  full_spec_list = torch.cat(specs, 1) # concatenate all data along the first axis
-  full_midi_list = torch.cat(midis, 1)
+  full_spec_list = torch.cat(specs, 0) # concatenate all data along the first axis
+  full_midi_list = torch.cat(midis, 0)
 
   '''if collate_shuffle == True:
       rand_idx = torch.randperm(full_spec_list.shape[1])
       #print("DATA SIZE", full_spec_list.shape[1], full_midi_list.shape[1])
       full_spec_list=full_spec_list[:,rand_idx,:]
-      full_midi_list=full_midi_list[:,rand_idx]
+      full_midi_list=full_midi_list[:,rand_idx]'''
 
-  if full_spec_list.shape[1] > MAX_BATCH:
+  if full_spec_list.shape[0] > MAX_BATCH:
       #print("TRIMMING BATCH")
-      full_midi_list = full_midi_list[:, :MAX_BATCH]
-      full_spec_list = full_spec_list[:, :MAX_BATCH, :]'''
+      full_midi_list = full_midi_list[:MAX_BATCH, :]
+      full_spec_list = full_spec_list[:MAX_BATCH, :, :]
+
+  #full_spec_list = torch.permute(full_spec_list, (1, 0, 2))
+  #full_midi_list = torch.permute(full_midi_list, (1, 0))    
 
   return full_spec_list, full_midi_list
 

@@ -6,6 +6,8 @@ import math
 import random
 import copy 
 import os
+import torch.nn.init as init
+
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EOS_IDX = 0
 PAD_IDX = 1
@@ -158,6 +160,7 @@ class DecoderLayer(nn.Module):
         # tgt_mask = [batch_size, 1, tgt_len, tgt_len]
         #print("DECODER LAYER:")
         #print("trg, enc_out, mask size:", x.shape, enc_output.shape, tgt_mask.shape)
+        #print(x.shape, enc_output.shape, tgt_mask.shape)
 
         attn_output = self.self_attn(x, x, x, tgt_mask)
         x = self.norm1(x + self.dropout(attn_output[0]))
@@ -168,10 +171,11 @@ class DecoderLayer(nn.Module):
         return x
     
 class TranscriptionTransformer(nn.Module):
-    def __init__(self, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, dropout=0.0):
+    def __init__(self, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, dropout=0.2):
         super(TranscriptionTransformer, self).__init__()
 
         self.feedforward_src_emb = nn.Linear(emb_dim, emb_dim)
+        init.xavier_uniform_(self.feedforward_src_emb.weight)
         self.tgt_emb = TokenEmbedding(vocab_size, emb_dim)
 
         self.positional_encoding = PositionalEncoding(emb_dim)
@@ -181,7 +185,8 @@ class TranscriptionTransformer(nn.Module):
         self.decoder_layers = nn.ModuleList([DecoderLayer(emb_dim, nhead, ffn_hidden, dropout) for _ in range(n_dec)])
 
         self.generator = nn.Linear(emb_dim, vocab_size) # generator
-        self.dropout = nn.Dropout(dropout)
+        self.softmax = nn.Softmax(dim=2)
+        self.dropout = nn.Dropout(0.2)
 
     def make_trg_mask(self, trg):
         #trg = [batch size, trg len]
@@ -201,12 +206,22 @@ class TranscriptionTransformer(nn.Module):
     def forward(self, src, tgt):
         #src = [batch size, src len, embed_dim]
         #trg = [batch size, trg len]
+        print("SOURCE",src[0,0,0])
 
         tgt_mask = self.make_trg_mask(tgt).to(DEVICE) # no padding mask needed for input
 
         # embedd the data
-        src_embedded = self.dropout(self.positional_encoding(self.feedforward_src_emb(src)))
+        src_embedded = self.feedforward_src_emb(src)
+        #src_embedded = src
+        #print("POST EMBEDDING:", src_embedded[0,0,0])
+        src_embedded = self.positional_encoding(src_embedded)
+        print(src_embedded[0,0,0])
+        src_embedded = self.dropout(src_embedded)
+        print(src_embedded[0,0,0])
+        print("EMBEDDED:",src_embedded[0,0,:5])
         tgt_embedded = self.dropout(self.positional_encoding(self.tgt_emb(tgt)))
+        print("TARGET EMBEDDED:", tgt_embedded[0,0,0])
+        input("Continue...")
 
         # src_embedded = [batch size, src len, embed_dim]
         # tgt_embedded = [batch size, tgt len, embed_dim]
@@ -216,12 +231,14 @@ class TranscriptionTransformer(nn.Module):
         for enc_layer in self.encoder_layers: # run encoder layers!
             enc_output = enc_layer(enc_output) #, src_mask)
 
+        print(enc_output.shape, enc_output[0,:,:])
+
         # decoder layers
         dec_output = tgt_embedded
         for dec_layer in self.decoder_layers:
             dec_output = dec_layer(dec_output, enc_output, tgt_mask)
 
-        output = self.generator(dec_output)
+        output = self.softmax(self.generator(dec_output))
         return output
     
     def encode(self, src):
@@ -241,7 +258,6 @@ class TranscriptionTransformer(nn.Module):
             dec_output = dec_layer(dec_output, enc_output, trg_mask) # takes 4 args, 5 given
         
         #output = self.generator(dec_output)
-        print(dec_output.shape, dec_output[:,-1].shape)
         last_output = self.generator(dec_output[:, -1])
 
         #out = out.transpose(0, 1)

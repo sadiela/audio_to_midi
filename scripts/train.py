@@ -27,33 +27,35 @@ def train_epoch(model, optimizer, train_dataloader, modeldir):
     start_time = timer()
     for i, data in enumerate(tqdm(train_dataloader)):
         if data is not None: 
-            src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
-            tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
-            tgt_input = tgt[:,:-1] # slice off EOS token
-            logits = model(src, tgt_input)
-            optimizer.zero_grad()
+            if data[0].shape[0] == 16:
+                src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
+                tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
+                tgt_input = tgt[:,:-1] # slice off EOS token
+                logits = model(src, tgt_input)
+                optimizer.zero_grad()
+                print(logits.shape)
+                print(logits[0,0,:], sum(logits[0,0,:]))
+                logits = logits.reshape(-1, logits.shape[-1])
+                tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
+                tgt_out = torch.eye(VOCAB_SIZE)[tgt_out].to(DEVICE)
 
-            logits = logits.reshape(-1, logits.shape[-1])
-            tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
-            tgt_out = torch.eye(VOCAB_SIZE)[tgt_out].to(DEVICE)
-
-            loss = categorical_cross_entropy(logits, tgt_out)
-            loss.backward()
-
-            optimizer.step()
-            losses += loss.item()
-            if i%10000 == 0 and i != 0:
-                logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
-                end_time = timer()
-                logging.info("Time: %f", (end_time-start_time))
-                cur_model_file = get_free_filename('model-', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
-                torch.save({
-                            'iters': i,
-                            'model_state_dict': transformer.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),
-                            }, cur_model_file) # incremental saves
-                logging.info("Saved model file %s", cur_model_file)
-                start_time = timer()
+                loss = categorical_cross_entropy(logits, tgt_out)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
+                optimizer.step()
+                losses += loss.item()
+                if i%10 == 0 and i != 0:
+                    logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
+                    end_time = timer()
+                    logging.info("Time: %f", (end_time-start_time))
+                    cur_model_file = get_free_filename('model-', modeldir, suffix='.pt') #modeldir + '/model-' + str(epoch + num_previous_models) + '.pt' 
+                    torch.save({
+                                'iters': i,
+                                'model_state_dict': transformer.state_dict(),
+                                'optimizer_state_dict': optimizer.state_dict(),
+                                }, cur_model_file) # incremental saves
+                    logging.info("Saved model file %s", cur_model_file)
+                    start_time = timer()
     return losses / len(list(train_dataloader))
 
 def evaluate(model, eval_dataloader):
@@ -169,13 +171,11 @@ if __name__ == '__main__':
         sys.exit(1)
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     results_file = modeldir + "/results.yaml"
-    print("GOT MY STUFF", modeldir)
     
     loglevel= args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
-    logging.basicConfig(filename=logfile, level=logging.DEBUG)
-    print("SET UP LOGGING")
+    logging.basicConfig(filename=logfile, level=logging.INFO)
 
     ### save hyperparameters to YAML file in folder ###
     try: 

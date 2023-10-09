@@ -1,6 +1,8 @@
 import os 
 import sys 
 from pathlib import Path
+from tqdm import tqdm
+import pickle
 
 SOUNDFONT_PATH = "./GeneralUser_GS_v1.471.sf2"
 
@@ -43,4 +45,30 @@ def get_free_filename(stub, dir, suffix='', date=False):
             return file_candidate
 
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    midi_dir = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/lmd_tracks/'
+    small_train = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/trainfiles_sma.p'
+    small_eval = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/data_lists/testfiles_sma.p'
+    raw_audio_dir = '/Users/sadiela/Documents/phd/research/music/audio_to_midi/raw_audio/'
+
+    with open(small_train, 'rb') as fp:
+        train_midi_paths = pickle.load(fp)
+    with open(small_eval, 'rb') as fp:
+        eval_midi_paths = pickle.load(fp)
+
+    for file in tqdm(train_midi_paths):
+        midi_path = midi_dir + file
+        wav_path = raw_audio_dir + file[:-3] + 'wav'
+        #print(midi_path, wav_path)
+        #input("continue...")
+        if not os.path.isfile(wav_path):
+            midi_to_wav(midi_path,wav_path)
+
+    for file in tqdm(eval_midi_paths):
+        midi_path = midi_dir + file
+        wav_path = raw_audio_dir + file[:-3] + 'wav'
+        #print(midi_path, wav_path)
+        #input("continue...")
+        if not os.path.isfile(wav_path):
+            midi_to_wav(midi_path,wav_path)
+

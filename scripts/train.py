@@ -41,10 +41,10 @@ def train_epoch(model, optimizer, train_dataloader, modeldir):
 
                 loss = categorical_cross_entropy(logits, tgt_out)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
                 losses += loss.item()
-                if i%10 == 0 and i != 0:
+                if i%100 == 0 and i != 0:
                     logging.info("ITERATION: %d, LOSS: %f", i, loss.item())
                     end_time = timer()
                     logging.info("Time: %f", (end_time-start_time))

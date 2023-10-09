@@ -2,10 +2,9 @@ num_enc: 2 # 8
 num_dec: 2 # 8
 num_heads: 2 # 4
 batch_size: 2 # 128 HOW MANY SONGS TO LOAD
-ffn_hidden: 512 # 1024
+ffn_hidden: 128 # 1024
 emb_dim: 512
-vocab_size: 631
-learningrate: .001
-num_epochs: 1
-midi_dir: './small_matched_data/midi/'
-audio_dir:  './small_matched_data/raw_audio/'
+learningrate: .0001
+num_epochs: 2
+train_paths: '../data_lists/trainfiles_sma.p'
+eval_paths: '../data_lists/testfiles_sma.p'

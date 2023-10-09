@@ -12,9 +12,10 @@ import random
 import time
 
 MAX_BATCH=16
+VOCAB_SIZE = 631
 
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='/raw_audio/', midi_file_dir='./lmd_tracks/', seq_dir='/sequences/', rand=True):
+    def __init__(self, dense_midis, audio_file_dir='../../raw_audio/', midi_file_dir='../lmd_tracks/', seq_dir='../lmd_seqs/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory
@@ -33,8 +34,8 @@ class AudioMidiDataset(Dataset):
 
     def __getitem__(self, index):
         # MELSPECTROGRAMS
-        midi_seqs = np.load(self.seq_dir + self.dense_midis[index][:-3] + 'npy') #pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index])
-        #midi_seqs = pretty_midi_to_seq_chunks(midi)
+        midi = pretty_midi.PrettyMIDI(self.midi_dir + self.dense_midis[index]) #np.load(self.seq_dir + self.dense_midis[index][:-3] + 'npy') #
+        midi_seqs = pretty_midi_to_seq_chunks(midi)
         idxs = np.where(midi_seqs[:,1] != 0)[0] # 0 is EOS TOKEN!, looks at 2nd row, checks for EOS's, thats empty sections
         if self.rand:
             idxs = np.random.permutation(idxs)
@@ -46,7 +47,6 @@ class AudioMidiDataset(Dataset):
             return None
         
         M_db = calc_mel_spec(audio_file = self.audio_dir + self.dense_midis[index][:-3] + 'wav', chunks=idxs)
-        
           
         return torch.tensor(M_db), torch.tensor(midi_seqs) #torch.tensor(M_db_clean[:,[chosen_chunk_idx],:]), torch.tensor(midi_seqs_clean[:, [chosen_chunk_idx]])
 

@@ -3,7 +3,7 @@ import pretty_midi
 from tqdm import tqdm
 import sys
 import multiprocessing
-from midi_utility import *
+from utility import *
 import pickle
 import random
 import numpy as np 

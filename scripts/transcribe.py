@@ -5,7 +5,7 @@ import argparse
 from spectrograms import *
 from midi_vocabulary import *
 from transcription_transformer import TranscriptionTransformer
-from midi_utility import *
+from utility import *
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MODEL_DIR = '../models/'

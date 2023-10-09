@@ -8,7 +8,7 @@ from operator import itemgetter
 import pickle
 from tqdm import tqdm
 import multiprocessing
-from midi_utility import *
+from utility import *
 
 
 SEG_LENGTH_SECS = 4.0879375
@@ -20,7 +20,7 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-    event_dictionary[i] = 'NOTE_START:' + str(i-3)
+    event_dictionary[i] = 'NOTE:' + str(i-3)
 
 for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)

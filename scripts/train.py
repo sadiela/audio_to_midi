@@ -15,38 +15,17 @@ import re
 torch.manual_seed(0)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_DIR = './models/'
+MODEL_DIR = '../models/'
 
 def categorical_cross_entropy(y_pred, y_true):
     y_pred = torch.clamp(y_pred, 1e-9, 1 - 1e-9)
     return -(y_true * torch.log(y_pred)).sum(dim=1).mean()  
 
-def get_free_filename(stub, dir, suffix='', date=False):
-    # Create unique file/directory 
-    counter = 0
-    while True:
-        if date:
-            file_candidate = '{}/{}-{}-{}{}'.format(str(dir), stub, datetime.today().strftime('%Y-%m-%d'), counter, suffix)
-        else: 
-            file_candidate = '{}/{}-{}{}'.format(str(dir), stub, counter, suffix)
-        if Path(file_candidate).exists():
-            #print("file exists")
-            counter += 1
-        else:  # No match found
-            print("Counter:", counter)
-            if suffix=='.p':
-                print("will create pickle file")
-            elif suffix:
-                Path(file_candidate).touch()
-            else:
-                Path(file_candidate).mkdir()
-            return file_candidate
-
 def train_epoch(model, optimizer, train_dataloader, modeldir):
     model.train()
     losses = 0
     start_time = timer()
-    for i, data in enumerate(train_dataloader):
+    for i, data in enumerate(tqdm(train_dataloader)):
         if data is not None: 
             src = data[0].to(DEVICE).to(torch.float32) # 512 x 16 x 512 (seq_len x batch_size x spec_bins)
             tgt = data[1].to(DEVICE).to(torch.long) # 1024 x 16 (seq_len x batch_size) # I think i want batch size first
@@ -56,6 +35,7 @@ def train_epoch(model, optimizer, train_dataloader, modeldir):
 
             logits = logits.reshape(-1, logits.shape[-1])
             tgt_out = tgt[:,1:].reshape(-1) # slice EOS token
+            tgt_out = torch.eye(VOCAB_SIZE)[tgt_out].to(DEVICE)
 
             loss = categorical_cross_entropy(logits, tgt_out)
             loss.backward()
@@ -94,6 +74,7 @@ def evaluate(model, eval_dataloader):
                 logits = model(src, tgt_input)
 
                 tgt_out = tgt[1:, :]
+                tgt_out = torch.eye(VOCAB_SIZE)[tgt_out].to(DEVICE)
                 loss = categorical_cross_entropy(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
                 losses += loss.item()
             except Exception as e:
@@ -101,8 +82,8 @@ def evaluate(model, eval_dataloader):
 
     return losses / len(list(eval_dataloader))
 
-def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate):
-    transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden)
+def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, ffn_hidden, learning_rate):
+    transformer = TranscriptionTransformer(n_enc, n_dec, emb_dim, nhead, VOCAB_SIZE, ffn_hidden)
 
     # check for previously trained models: 
     #previous_models = [f for f in os.listdir(modeldir) if f[-2:] == 'pt' ]
@@ -137,22 +118,22 @@ def prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden
 
     return transformer, optimizer
 
-def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi_dir, train_paths, eval_paths):
+def train(transformer, optimizer, n_epoch, batch_size, modeldir, train_paths, eval_paths):
     transformer.to(DEVICE)
     train_losses = []
     eval_losses = []
     num_previous_models = len([f for f in os.listdir(modeldir) if f[-2:] == 'pt' ])
     
     logging.info("TRAINING BATCH SIZE: %d", batch_size)
-    training_data = AudioMidiDataset(train_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
+    training_data = AudioMidiDataset(train_paths)
     train_dataloader = DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
     
-    eval_data = AudioMidiDataset(eval_paths, audio_file_dir=audio_dir, midi_file_dir=midi_dir)
+    eval_data = AudioMidiDataset(eval_paths)
     eval_dataloader = DataLoader(eval_data, batch_size=batch_size, collate_fn=collate_fn)
 
     for epoch in range(1, n_epoch+1):
         start_time = timer()
-        train_loss = train_epoch(transformer, optimizer, train_dataloader)
+        train_loss = train_epoch(transformer, optimizer, train_dataloader, modeldir)
         logging.info("Finished training epoch %d", int(epoch))
         end_time = timer()
         train_losses.append(train_loss)
@@ -170,6 +151,9 @@ def train(transformer, optimizer, n_epoch, batch_size, modeldir, audio_dir, midi
     return transformer, train_losses, eval_losses
 
 if __name__ == '__main__':
+    small_trainfiles = '../data_lists/trainfiles_sma.p'
+    small_testfiles = '../data_lists/testfiles_sma.p'
+
     parser = argparse.ArgumentParser(description='Arguments for training')
     parser.add_argument('-m', '--modeldir', help='desired model subdirectory name', required=True) # default=modeldir)
     parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
@@ -179,16 +163,19 @@ if __name__ == '__main__':
     modelsubdir = args['modeldir']
     ### create directory for models and results ###
     modeldir = MODEL_DIR + modelsubdir
+    print(modeldir)
     if not os.path.isdir(modeldir):
-        #print("DIRECTORY DOES NOT EXIST:", modeldir)
+        print("DIRECTORY DOES NOT EXIST:", modeldir)
         sys.exit(1)
     param_file = modeldir + "/MODEL_PARAMS.yaml"
     results_file = modeldir + "/results.yaml"
+    print("GOT MY STUFF", modeldir)
     
     loglevel= args['loglevel']
     numeric_level = getattr(logging, loglevel.upper(), None) # put it into uppercase
     logfile = get_free_filename('train', modeldir, suffix='.log', date=False)
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
+    print("SET UP LOGGING")
 
     ### save hyperparameters to YAML file in folder ###
     try: 
@@ -207,11 +194,8 @@ if __name__ == '__main__':
     batch_size = int(model_hyperparams['batch_size'])
     ffn_hidden = int(model_hyperparams['ffn_hidden'])
     emb_dim = int(model_hyperparams['emb_dim'])
-    vocab_size = int(model_hyperparams['vocab_size'])
     learning_rate = float(model_hyperparams['learningrate'])
-    midi_dir = model_hyperparams['midi_dir']
-    audio_dir = model_hyperparams['audio_dir']
-    train_midi_pickle = model_hyperparams['train_paths']
+    train_midi_pickle = model_hyperparams['train_paths'] # path to relevant file list
     eval_midi_pickle = model_hyperparams['eval_paths']
 
     with open(train_midi_pickle, 'rb') as fp:
@@ -220,11 +204,11 @@ if __name__ == '__main__':
         eval_midi_paths = pickle.load(fp)
 
     # save param file again
-    transformer, optimizer = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, vocab_size, ffn_hidden, learning_rate, num_epochs)
+    transformer, optimizer = prepare_model(modeldir, n_enc, n_dec, emb_dim, nhead, ffn_hidden, learning_rate)
 
     logging.info("Training transformer model")
     print("DEVICE:", DEVICE)
-    transformer, train_losses, eval_losses = train(transformer, optimizer, num_epochs, batch_size, modeldir, audio_dir, midi_dir, train_paths=train_midi_paths, eval_paths=eval_midi_paths)
+    transformer, train_losses, eval_losses = train(transformer, optimizer, num_epochs, batch_size, modeldir, train_paths=train_midi_paths, eval_paths=eval_midi_paths)
     
     results = {}
     results["trainloss"] = train_losses

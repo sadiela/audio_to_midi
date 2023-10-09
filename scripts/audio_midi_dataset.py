@@ -16,7 +16,7 @@ VOCAB_SIZE = 631
 
 # CHANGE RAW AUDIO DIR
 class AudioMidiDataset(Dataset):
-    def __init__(self, dense_midis, audio_file_dir='../raw_audio/', midi_file_dir='../lmd_tracks/', seq_dir='../lmd_seqs/', rand=True):
+    def __init__(self, dense_midis, audio_file_dir='../../raw_audio/', midi_file_dir='../lmd_tracks/', seq_dir='../lmd_seqs/', rand=True):
         """
         Args:
             audio_file_dir (string): Path to the wav file directory

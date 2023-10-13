@@ -20,10 +20,13 @@ event_dictionary[0] = '<EOS>'
 event_dictionary[1] = '<PAD>'
 event_dictionary[2] = '<BOS>'
 for i in range(3,131):
-    event_dictionary[i] = 'NOTE:' + str(i-3)
+    event_dictionary[i] = 'NOTE_ON:' + str(i-3)
 
 for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
+
+for i in range(633,761):
+    event_dictionary[i] = 'NOTE_OFF:' + str(i-3)
 
 #event_idxs = {v: k for k, v in event_dictionary.items()}
 #for i in range(259,760):
@@ -163,6 +166,8 @@ def pretty_midi_to_seq_chunks_w_noteoff(open_midi):
     #array_seqs = array_seqs.astype('int8')
     #print(list(array_seqs[:,0]))
     return array_seqs
+
+
 
 def pretty_midi_to_seq_chunks(midi_obj): 
     num_segs = int((midi_obj.get_end_time() // SEG_LENGTH_SECS)) + 1

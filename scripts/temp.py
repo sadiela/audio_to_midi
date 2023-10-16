@@ -85,7 +85,10 @@ def pretty_midi_to_seq_chunks_w_noteoff_and_velocity(open_midi):
         cur_seg = int((note[2] // SEG_LENGTH_SECS))
         if note[2] > previous_note_time:
             note_offset = note[2] - cur_seg*SEG_LENGTH_SECS
-            rounded_offset = round(note_offset,2)
+            
+            note_offset *= 100
+            rounded_offset = round(note_offset)/100.0
+            # print(rounded_offset)
             if rounded_offset != 0.0:
                 event_sequences[cur_seg].append(event_idxs[rounded_offset])
         if not current_velocity == note[3]:
@@ -118,18 +121,18 @@ def seq_chunks_w_noteoff_and_velocity_to_pretty_midi(array_seqs):
         currentTime = SEG_LENGTH_SECS * i
         for event in chunk:
             vocabEvent = event_dictionary[event]
-            if "NOTE_ON:" in str(vocabEvent):
+            if event >=3 and event < 131 :
                 currentNotes.append((event, currentTime))
-            elif "NOTE_OFF:" in str(vocabEvent):
-                for note_event in range(len(currentNotes)):
-                    if "NOTE_ON:" in event_dictionary[currentNotes[note_event][0]]:
+            elif event >= 632 and event < 760:
+                for note_event in range(len(currentNotes)): 
+                    if currentNotes[note_event][0] >=3 and currentNotes[note_event][0] <= 130:
                         note = pretty_midi.Note(velocity=currentVelocity, pitch = currentNotes[note_event][0]-3, start = currentNotes[note_event][1], end = currentTime)
                         piano.notes.append(note)
                         currentNotes.remove(currentNotes[note_event])
                         break
-            elif event >= 131 and event <= 631:
+            elif event >= 131 and event < 632:
                 currentTime = SEG_LENGTH_SECS*i + event_dictionary[event]
-            elif "VEL:" in str(vocabEvent):
+            elif event in range(760,888):
                 currentVelocity = event-760
         
     created_midi.instruments.append(piano)
@@ -137,24 +140,14 @@ def seq_chunks_w_noteoff_and_velocity_to_pretty_midi(array_seqs):
                 
 
 if __name__ == '__main__':
-    directory = '/scratch2/lmd_tracks/lmd_tracks/d'
-    # for filename in os.listdir(directory):
-    #     f = os.path.join(directory, filename)
-    #     # checking if it is a file
-    #     if os.path.isfile(f):
-    #         # tempMid = pretty_midi.PrettyMIDI(os.path.dirname(os.path.abspath(__file__)) + "/evaluation_test_data/complex.mid")
-    #         tempMid = pretty_midi.PrettyMIDI(f)
-    #         thing = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
-    #         generatedMidi = seq_chunks_w_noteoff_and_velocity_to_pretty_midi(thing)
-    #         generatedMidi.write(os.path.dirname(os.path.abspath(__file__))+'/generatedmidi/'+filename)
     
+    directory = '/scratch2/lmd_tracks/lmd_tracks/d'
     gendirectory = os.path.dirname(os.path.abspath(__file__))+'/generatedmidi/'
     totalF1Score = 0
     numberOfFiles = 0
-    filename = "evaluation_test_data/complex.mid"
-    # filename = "evaluation_test_data/d0a0bf78d1d5a60ab02d08ee53f218a8_1.mid"
-    # filename2 = "d0a0bf78d1d5a60ab02d08ee53f218a8_1.mid"
-    # for filename in os.listdir(directory):
+    # filename = "evaluation_test_data/complex.mid"
+    filename = "evaluation_test_data/d0a0bf78d1d5a60ab02d08ee53f218a8_1.mid"
+
         
     
     f = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
@@ -163,17 +156,18 @@ if __name__ == '__main__':
     # tempMid2 = pretty_midi.PrettyMIDI(f2)
     
     thing = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid1)
-    for chunk in thing:
-        for i in chunk:
-            if i == 1:
-                break
-            if i >130 and i < 632:
-                print("TS: " + str(i)) 
-            print(event_dictionary[i])
+    # for chunk in thing:
+    # for i in thing[0]:
+    #     if i == 1:
+    #         break
+    #     if i >130 and i < 632:
+    #         print("TS: " + str(i)) 
+    #     print(event_dictionary[i])
     
     asd = seq_chunks_w_noteoff_and_velocity_to_pretty_midi(thing)
-    # asd.write(gendirectory +"d0a0bf78d1d5a60ab02d08ee53f218a8_1.mid")
-    asd.write(gendirectory +"complex.mid")
+    asd.write(gendirectory +"d0a0bf78d1d5a60ab02d08ee53f218a8_1.mid")
+    # asd.write(gendirectory +"complex.mid")
+
     est_time, est_freqs = evaluation.createMidiToArray(asd)
     ref_time, ref_freqs = evaluation.createMidiToArray(tempMid1)
     with open("test1.txt", "w") as output:
@@ -181,18 +175,3 @@ if __name__ == '__main__':
     with open("test2.txt", "w") as output:
         output.write(str(ref_freqs))
     print(evaluation.evaluate(est_time, est_freqs,ref_time, ref_freqs))
-    # est_time, est_freqs = evaluation.createMidiToArray(asd)
-    # ref_time, ref_freqs = evaluation.createMidiToArray(tempMid2)
-    # print(evaluation.evaluate(est_time, est_freqs,ref_time, ref_freqs))
-    
-    # # checking if it is a file
-    # if os.path.isfile(f) and os.path.isfile(f2):
-    #     tempMid1 = pretty_midi.PrettyMIDI(f)
-    #     tempMid2 = pretty_midi.PrettyMIDI(f2)
-    #     est_time, est_freqs = evaluation.createMidiToArray(tempMid1)
-    #     ref_time, ref_freqs = evaluation.createMidiToArray(tempMid2)
-    #     totalF1Score += evaluation.evaluate(est_time, est_freqs,ref_time, ref_freqs)
-    #     numberOfFiles += 1
-    # print("F1Score: "+ str(totalF1Score/numberOfFiles))
-
-

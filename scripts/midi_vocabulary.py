@@ -202,6 +202,72 @@ def pretty_midi_to_seq_chunks(midi_obj):
     array_seqs = array_seqs.astype('int16')
     return array_seqs
 
+def pretty_midi_to_seq_chunks_w_noteoff_and_velocity(open_midi): 
+    note_starts = [(1,note.pitch,note.start, note.velocity) for note in open_midi.instruments[0].notes]
+    note_ends = [(0,note.pitch,note.end,note.velocity) for note in open_midi.instruments[0].notes]
+    all_note_tuples = note_starts + note_ends
+    all_note_tuples = sorted(all_note_tuples,key=itemgetter(2))
+    num_segs = int((open_midi.get_end_time() // SEG_LENGTH_SECS)) + 1
+    event_sequences = [[2] for _ in range(num_segs)] 
+    previous_note_time = 0.0
+    current_velocity = -1
+    # print(all_note_tuples)
+    for note in all_note_tuples:
+        cur_seg = int((note[2] // SEG_LENGTH_SECS))
+        if note[2] > previous_note_time:
+            note_offset = note[2] - cur_seg*SEG_LENGTH_SECS
+            
+            note_offset *= 100
+            rounded_offset = round(note_offset)/100.0
+            # print(rounded_offset)
+            if rounded_offset != 0.0:
+                event_sequences[cur_seg].append(event_idxs[rounded_offset])
+        if not current_velocity == note[3]:
+            event_sequences[cur_seg].append(event_idxs["VEL:"+str(note[3])])
+            current_velocity = note[3]
+        if note[0] == 1:
+            event_sequences[cur_seg].append(event_idxs["NOTE_ON:"+str(note[1])])
+        elif note[0] == 0:
+            event_sequences[cur_seg].append(event_idxs["NOTE_OFF:"+str(note[1])])
+        previous_note_time = note[2]
+    
+    for seq in event_sequences:
+        while (len(seq)) < MAX_LENGTH:
+            seq.append(1) # PADDING!
+    array_seqs = np.array(event_sequences)
+    #array_seqs = array_seqs.astype('int8')
+    #print(list(array_seqs[:,0]))
+    return array_seqs
+
+#array_seqs is an array of sequences
+def seq_chunks_w_noteoff_and_velocity_to_pretty_midi(array_seqs):
+    created_midi = pretty_midi.PrettyMIDI()
+    # piano_program = pretty_midi.instrument_name_to_program('Piano 1')
+    piano = pretty_midi.Instrument(program=1)
+    currentNotes = []
+    currentTime = 0.0
+    currentVelocity = 100
+    for i in range(len(array_seqs)):
+        chunk = array_seqs[i]
+        currentTime = SEG_LENGTH_SECS * i
+        for event in chunk:
+            if event >=3 and event < 131 :
+                currentNotes.append((event, currentTime))
+            elif event >= 632 and event < 760:
+                for note_event in range(len(currentNotes)): 
+                    if currentNotes[note_event][0] >=3 and currentNotes[note_event][0] <= 130 and currentNotes[note_event][0]-3 == event - 632:
+                        if currentTime - currentNotes[note_event][1]  > 0:
+                            note = pretty_midi.Note(velocity=currentVelocity, pitch = currentNotes[note_event][0]-3, start = currentNotes[note_event][1], end = currentTime)
+                            piano.notes.append(note)
+                        currentNotes.remove(currentNotes[note_event])
+                        break
+            elif event >= 131 and event < 632:
+                currentTime = SEG_LENGTH_SECS*i + event_dictionary[event]
+            elif event in range(760,888):
+                currentVelocity = event-760
+        
+    created_midi.instruments.append(piano)
+    return created_midi
 
 def convert_midis(seq_stub, midi_list, midi_stub): 
     for mid in midi_list:

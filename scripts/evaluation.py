@@ -4,6 +4,29 @@ import pretty_midi
 import os
 import numpy as np
 
+def get_intervals_and_pitches_and_velocities(midi): # tested, looks good
+
+    onsets = []
+    offsets = [] 
+    pitches = []
+    velocities = []
+
+    for instrument in midi.instruments:
+        for note in instrument.notes:
+            onsets.append(note.start)
+            offsets.append(note.end)
+            if(note.end - note.start <= 0):
+                print(note.end)
+                print(note.start)
+            pitches.append(mir_eval.util.midi_to_hz(note.pitch))
+            velocities.append(note.velocity)
+
+    intervals = np.asarray([onsets, offsets], dtype=np.float32).T
+    pitches = np.asarray(pitches, dtype=np.float32)
+    velocities = np.asarray(velocities, dtype=np.float32)
+    mir_eval.util.validate_intervals(intervals)
+
+    return intervals, pitches, velocities
 
 def createMidiToText(prettyMidi, filename = 'test.txt'):
 

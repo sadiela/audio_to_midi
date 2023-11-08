@@ -14,7 +14,7 @@ for folder in folder_extensions:
         os.makedirs(os.path.join(saveDirectory,folder))
     for file in os.listdir(os.path.join(directory,folder)):
         if file.endswith(".mid"):
-            tempMid = pretty_midi.PrettyMIDI('/scratch2/lmd_tracks/lmd_tracks/' + folder + '/' + file)
+            tempMid = pretty_midi.PrettyMIDI(os.path.join(directory,folder,file))
             tempMidData = midi_vocabulary.pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
             # save tempMidData in the correct folder in saveDirectory
             np.save(os.path.join(saveDirectory,folder,file[:-4],".npy"),tempMidData)

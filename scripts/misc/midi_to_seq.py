@@ -1,6 +1,8 @@
 import pretty_midi
 import os
-import midi_vocabulary
+import sys
+sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from midi_vocabulary import *
 import numpy as np
 
 # create a script that converts all of the midi files in lmd tracks to numpy sequences
@@ -15,7 +17,7 @@ for folder in folder_extensions:
     for file in os.listdir(os.path.join(directory,folder)):
         if file.endswith(".mid"):
             tempMid = pretty_midi.PrettyMIDI(os.path.join(directory,folder,file))
-            tempMidData = midi_vocabulary.pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
+            tempMidData = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
             # save tempMidData in the correct folder in saveDirectory
             np.save(os.path.join(saveDirectory,folder,file[:-4],".npy"),tempMidData)
             # break

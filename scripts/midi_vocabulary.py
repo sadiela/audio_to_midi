@@ -25,8 +25,11 @@ for i in range(3,131):
 for i in range(131,632):
     event_dictionary[i] = round(0.01*(i-130),2)
 
-for i in range(633,761):
-    event_dictionary[i] = 'NOTE_OFF:' + str(i-3)
+for i in range(632,760):
+    event_dictionary[i] = 'NOTE_OFF:' + str(i-632)
+    
+for i in range(760,888):
+    event_dictionary[i] = 'VEL:' + str(i-760)
 
 #event_idxs = {v: k for k, v in event_dictionary.items()}
 #for i in range(259,760):

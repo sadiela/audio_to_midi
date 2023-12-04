@@ -22,7 +22,7 @@ for folder in tqdm.tqdm(folder_extensions):
         if file.endswith(".mid"):
             tempMid = pretty_midi.PrettyMIDI(os.path.join(directory,folder,file))
             if len(tempMid.instruments) == 0:
-                break
+                continue
             try:
                 tempMidData = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
             except:

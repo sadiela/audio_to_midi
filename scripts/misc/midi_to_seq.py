@@ -23,10 +23,7 @@ for folder in tqdm.tqdm(folder_extensions):
             tempMid = pretty_midi.PrettyMIDI(os.path.join(directory,folder,file))
             if len(tempMid.instruments) == 0:
                 continue
-            try:
-                tempMidData = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
-            except:
-                pdb.set_trace()
+            tempMidData = pretty_midi_to_seq_chunks_w_noteoff_and_velocity(tempMid)
             # save tempMidData in the correct folder in saveDirectory
             np.save(os.path.join(saveDirectory,folder,file[:-4]),tempMidData)
             # break

@@ -9,10 +9,10 @@ import pdb
 # create a script that converts all of the midi files in lmd tracks to numpy sequences
 
 folder_extensions = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'] 
-# directory = "/projectnb/textconv/sadiela/audio_to_midi/lmd_tracks"
-# saveDirectory = "/projectnb/textconv/dcliu3/audio_to_midi/lmd_tracks_seqs"
-directory = "/scratch2/lmd_tracks/lmd_tracks"
-saveDirectory = "/scratch2/lmd_tracks/lmd_tracks_seqs"
+directory = "/projectnb/textconv/sadiela/audio_to_midi/lmd_tracks"
+saveDirectory = "/projectnb/textconv/dcliu3/audio_to_midi/lmd_tracks_seqs"
+# directory = "/scratch2/lmd_tracks/lmd_tracks"
+# saveDirectory = "/scratch2/lmd_tracks/lmd_tracks_seqs"
 for folder in folder_extensions:
     # if folder exists in saveDirectory, then skip, otherwise create
     if not os.path.exists(os.path.join(saveDirectory,folder)):
